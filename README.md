@@ -1,2 +1,2 @@
-# kit
-Code on Phone is a SaaS IDE for vibe coding with ERA KIT.
+# TOY
+Code on Phone is a SaaS IDE for toying around with vibe coding.
