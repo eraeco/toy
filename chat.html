@@ -13,10 +13,8 @@
 <form onsubmit="kit.say('','prompt'); return false;" class="prompt-bar">
   <div class="input-wrap">
     <span class="prompt-symbol">$&nbsp;</span>
-    <input id="prompt" name="cmd" placeholder="ls" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    <button type="button" class="clear-btn" onclick="document.getElementById('prompt').value=''; document.getElementById('prompt').focus();">✖</button>
+    <textarea id="prompt" name="cmd" placeholder="" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
   </div>
-  <button type="submit" class="run-btn">RUN</button>
 </form>
 <style>
 :root { --fill: var(--mood); }
@@ -110,7 +108,7 @@ textarea {
   box-shadow: inset 0 0 10px rgba(191,0,255,0.2);
 }
 .prompt-symbol { color: var(--pop); font-family: monospace; font-weight: bold; font-size: 1.2em; }
-.input-wrap input {
+.input-wrap textarea {
   flex: 1;
   background: transparent;
   border: none;
@@ -119,36 +117,10 @@ textarea {
   font-size: 1.2em;
   padding: 12px 0;
   outline: none;
-  animation: none; /* remove global pulse */
+  resize: none;
+  overflow-y: hidden;
 }
-.input-wrap input:focus::placeholder { opacity: 0.3; }
-.clear-btn {
-  background: transparent;
-  border: none;
-  color: rgba(255,255,255,0.5);
-  font-size: 1.2em;
-  padding: 10px;
-  cursor: pointer;
-}
-.clear-btn:active { color: white; transform: scale(0.9); }
-.run-btn {
-  background: var(--pop);
-  color: var(--mood);
-  border: none;
-  border-radius: 15px;
-  padding: 15px 25px;
-  font-weight: 900;
-  font-family: 'Courier New', monospace;
-  font-size: 1.1em;
-  cursor: pointer;
-  box-shadow: 0 0 15px var(--pop);
-  transition: 0.2s;
-}
-.run-btn:active {
-  transform: scale(0.9);
-  background: white;
-  box-shadow: 0 0 20px white;
-}
+.input-wrap textarea:focus::placeholder { opacity: 0.3; }
 iframe {
   display: block;
   width: 100%;
@@ -208,6 +180,7 @@ kit.ear('prompt',(eve)=>{
   histIndex = history.length;
   kit.say(prompt.value+'\r','host');
   prompt.value = "";
+  autoGrow(prompt);
 });
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
@@ -221,9 +194,13 @@ prompt.onkeydown = function(eve){
     if(histIndex < history.length - 1) { histIndex++; prompt.value = history[histIndex]; }
     else { histIndex = history.length; prompt.value = ''; }
     eve.preventDefault();
+  } else if (eve.key === 'Enter' && !eve.shiftKey) {
+    eve.preventDefault();
+    kit.say('', 'prompt');
   }
 };
 prompt.oninput = function(eve){
+  autoGrow(prompt);
   //console.log("oninput?", prompt.value, eve);
   if(prompt.wait){ clearTimeout(prompt.wait) }
   prompt.wait = setTimeout(async function(){
@@ -237,6 +214,20 @@ prompt.oninput = function(eve){
     if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
   },333);
 }
+const autoGrow = (textarea) => {
+  textarea.style.height = 'auto';
+  textarea.style.height = (textarea.scrollHeight) + 'px';
+  // Fix for mobile browser URL bar hiding the prompt
+  setTimeout(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  }, 100);
+};
+
+prompt.addEventListener('focus', () => {
+  autoGrow(prompt);
+});
+
+autoGrow(prompt);
 B.all('#help')[0].ear('pointerdown',function(eve){
   if(!prompt.try){ return }
   eve.preventDefault();

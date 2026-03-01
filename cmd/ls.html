@@ -1,27 +1,42 @@
 <link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="name">ls</div>
 <div id="list" class="ls">
-  GRID GOES HERE
+
 </div>
 <style>
 .ls { 
   width: 100%; 
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
   padding: 10px;
+display: block;
+  float: left;
+  column-width: 6em;
+
+  
+}
+  /* Global box-sizing fix */
+
+*, *::before, *::after {
+
+  box-sizing: border-box;
+
 }
 .ls a {
-  display: flex;
+display: block;
+  float: left;
+  margin: 0.1em; width: 100%;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 6em;
+  min-h-eight: 1em;
   padding: 1em 0.5em;
   text-align: center;
   background: linear-gradient(135deg, rgba(191, 0, 255, 0.1), rgba(0,0,0,0.6));
   border: 2px solid var(--pop);
   border-radius: 16px;
   backdrop-filter: blur(var(--blur));
-  color: #fff;
+  
   font-family: 'Courier New', monospace;
   font-weight: 900;
   text-shadow: 0 0 5px var(--pop);
@@ -45,8 +60,9 @@
 }
 .folder-icon { color: #f1c40f; filter: drop-shadow(0 0 10px rgba(241,196,15,0.8)); text-shadow: none; }
 .file-icon { color: #00ffc8; filter: drop-shadow(0 0 10px rgba(0,255,200,0.8)); text-shadow: none; }
+  .file, .agh { border-color: white; background: pink; } 
 .header-cmd {
-  grid-column: 1 / -1;
+display: block; width: 100%;
   color: var(--pop);
   font-weight: 900;
   font-size: 1.2em;
@@ -59,7 +75,7 @@
 </style>
 <script src="../util.js"></script>
 <script>
-  console.off=1;
+
 kit.ear('ls',function hear(eve){
   CMD.ls(eve.detail || eve.data, list);
   hear.off();
@@ -70,16 +86,13 @@ CMD.ls = function(s,v,f,cmd){
   v.tag('ls',+1).innerHTML = '';
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
   
-  var header = B.new('div');
-  header.className = 'header-cmd';
-  header.innerText = "⚡ " + cmd.trim();
-  v.append(header);
+  B.all('#name')[0].innerText = cmd;
 
   f = (s.indexOf('\t')+1)? '\t' : /\s+/;
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
   
   var isBack = B.new('a');
-  isBack.innerHTML = '<div class="icon folder-icon">📁</div>..';
+  isBack.innerHTML = '..';
   isBack.dataset.val = '..';
   v.append(isBack);
 
@@ -92,10 +105,12 @@ CMD.ls = function(s,v,f,cmd){
     // Simple heuristic for file vs folder: folders usually don't have extensions, files do.
     // Also hidden files start with .
     var isFile = (item.includes('.') && item !== '.' && item !== '..');
+    fold = '' ;
+    if(!isFile) { fold = '/' } 
     // For pure UI, let's just make it look cool based on this guess
-    var iconHtml = isFile ? '<div class="icon file-icon">📄</div>' : '<div class="icon folder-icon">📁</div>';
     
-    a.innerHTML = iconHtml + item;
+    
+    a.innerHTML = item + fold;
     v.append(a);
   });
   
