@@ -1,0 +1,371 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="shell"></div>
+<div id="help"></div>
+<div class="quick-keys">
+  <button type="button" onclick="kit.say('ls .', 'prompt')">LS</button>
+  <button type="button" onclick="kit.say('cd ..', 'prompt')">CD ..</button>
+  <button type="button" onclick="kit.say('clear', 'prompt')">CLEAR</button>
+  <button type="button" onclick="kit.say('pwd', 'prompt')">PWD</button>
+  <button type="button" onclick="kit.say('git status', 'prompt')">GIT</button>
+  <button type="button" onclick="kit.say('npm start', 'prompt')">NPM</button>
+  <button type="button" onclick="kit.say('ps', 'prompt')">PS</button>
+</div>
+<form onsubmit="kit.say('','prompt'); return false;" class="prompt-bar">
+  <div class="input-wrap">
+    <span class="prompt-symbol">$&nbsp;</span>
+    <input id="prompt" name="cmd" placeholder="ls" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button type="button" class="clear-btn" onclick="document.getElementById('prompt').value=''; document.getElementById('prompt').focus();">✖</button>
+  </div>
+  <button type="submit" class="run-btn">RUN</button>
+</form>
+<style>
+:root { --fill: var(--mood); }
+::selection {
+  background: var(--pop);
+  color: var(--fill);
+}
+body {
+  background: var(--fill);
+  grid-template-rows: 1fr auto auto auto;
+  overflow-x: hidden;
+}
+textarea {
+  height: 100%;
+}
+#shell {
+  width: 100%;
+  height: 100%;
+  padding: 0 0.5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+#shell > div {
+  white-space: pre-wrap;
+  word-break: break-all;
+  width: 100%;
+  display: block;
+  margin-bottom: 0.5em;
+}
+#shell > div > p {
+  display: block;
+  text-align: left;
+}
+#help {
+  padding: 0 1em;
+  color: lime;
+}
+.quick-keys {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,0.8);
+  border-top: 2px solid var(--pop);
+  scrollbar-width: none;
+}
+.quick-keys::-webkit-scrollbar { display: none; }
+.quick-keys button {
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, rgba(191,0,255,0.2), transparent);
+  border: 1px solid var(--pop);
+  color: #fff;
+  padding: 12px 25px;
+  border-radius: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1em;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  text-shadow: 0 0 5px var(--pop);
+  box-shadow: 0 0 10px rgba(191,0,255,0.2);
+  transition: all 0.2s;
+}
+.quick-keys button:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+  text-shadow: none;
+}
+.prompt-bar {
+  display: flex;
+  padding: 10px;
+  background: var(--fill);
+  border-top: 2px solid var(--pop);
+  gap: 10px;
+  align-items: center;
+  box-shadow: 0 -10px 20px rgba(0,0,0,0.5);
+}
+.input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--pop);
+  border-radius: 20px;
+  padding: 0 15px;
+  box-shadow: inset 0 0 10px rgba(191,0,255,0.2);
+}
+.prompt-symbol { color: var(--pop); font-family: monospace; font-weight: bold; font-size: 1.2em; }
+.input-wrap input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 1.2em;
+  padding: 12px 0;
+  outline: none;
+  animation: none; /* remove global pulse */
+}
+.input-wrap input:focus::placeholder { opacity: 0.3; }
+.clear-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.2em;
+  padding: 10px;
+  cursor: pointer;
+}
+.clear-btn:active { color: white; transform: scale(0.9); }
+.run-btn {
+  background: var(--pop);
+  color: var(--mood);
+  border: none;
+  border-radius: 15px;
+  padding: 15px 25px;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1em;
+  cursor: pointer;
+  box-shadow: 0 0 15px var(--pop);
+  transition: 0.2s;
+}
+.run-btn:active {
+  transform: scale(0.9);
+  background: white;
+  box-shadow: 0 0 20px white;
+}
+iframe {
+  display: block;
+  width: 100%;
+  border: none;
+  height: 0;
+  overflow-x: hidden;
+}
+/*#shell > div {
+  overflow: hidden;
+  height: 4em;
+  transition: 1s all;
+}
+#shell > div:hover {
+  height: auto;
+}
+#shell > div:last-child {
+  height: auto;
+}*/
+form { width: 100%; }
+input { animation: pulse 2s infinite; }
+input:focus { animation: none; }
+input::placeholder { opacity: 1; }
+input:focus::placeholder { opacity: 0.5; }
+
+.ls { width: 100% }
+.ls {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.ls a {
+  align-items: center;
+  justify-content: center;
+  min-width: 4em;
+  min-height: 2em;
+  padding: 0.5em;
+  text-align: center;
+  border: 1px solid var(--pop);
+  backdrop-filter:  blur(var(--blur));
+}
+.ls a:hover {
+  background: var(--pop);
+  color: var(--mood);
+}
+</style>
+<script src="util.js"></script>
+<script>;(function(chat){ chat();
+var prompt, history = [], histIndex = -1;
+(prompt = B.all('#prompt')[0]).focus();
+kit.ear('chat',(eve)=>{
+  //console.log(">", eve.detail || eve.data);
+  stream(eve.detail || eve.data);
+});
+kit.ear('prompt',(eve)=>{
+  var cmd = eve.detail||eve.data;
+  if(cmd){ prompt.value = cmd }
+  var val = prompt.value.trim();
+  if(val && history[history.length-1] !== val) { history.push(val); }
+  histIndex = history.length;
+  kit.say(prompt.value+'\r','host');
+  prompt.value = "";
+});
+kit.ear('prompt.try',(eve)=>{
+  prompt.value = eve.detail||eve.data;
+  //prompt.focus(); prompt.select();
+});
+prompt.onkeydown = function(eve){
+  if(eve.key === 'ArrowUp') {
+    if(histIndex > 0) { histIndex--; prompt.value = history[histIndex]; }
+    eve.preventDefault();
+  } else if (eve.key === 'ArrowDown') {
+    if(histIndex < history.length - 1) { histIndex++; prompt.value = history[histIndex]; }
+    else { histIndex = history.length; prompt.value = ''; }
+    eve.preventDefault();
+  }
+};
+prompt.oninput = function(eve){
+  //console.log("oninput?", prompt.value, eve);
+  if(prompt.wait){ clearTimeout(prompt.wait) }
+  prompt.wait = setTimeout(async function(){
+    var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
+    var v = B.new('div'); v.innerHTML = answer; // NEVER ADD TO DOM, TO PREVENT XSS!!!!!
+    v = v.all('.a')[0]; 
+    var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
+    help.innerHTML = ''; // empty!
+    help.textContent = v.textContent;
+    prompt.try = (v.all('code')[0] || v.all('b')[0] || {}).textContent||'';
+    if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
+  },333);
+}
+B.all('#help')[0].ear('pointerdown',function(eve){
+  if(!prompt.try){ return }
+  eve.preventDefault();
+  kit.say(prompt.try, 'prompt.try');
+});
+var stream = function(t){
+  //stream.all = (stream.all||'')+t;
+  stream.last = (stream.last||'')+t;
+  (stream.eat || CMD.bash)(stream.last);
+}, CMD = {};
+
+;(function(){
+var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+stream.eat = function(s){
+  var f = s.cut(F,ESC);
+  if(!f[1]){ setTimeout(t=>{if(F.forEach){shell.append("cannot find prompt. custom shell being used?")}}); return }
+  F = f[1];
+  f = f[0].split('\r\n').slice(-1)[0]; // make more unique?
+  F = f+F;
+  //console.log("prompt:", [F]);
+  (stream.eat = CMD.bash)(s);
+}
+CMD.bash = function(S, cmdl, cmd, tmp){
+  var arr = S.split(F);
+  if(arr[arr.length-1].flat().trim()){ 
+    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+    if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
+      var lines = S.split('\n'), lastL = lines[lines.length-1];
+      var newF = lastL.cut(P, ESC);
+      if(newF[1]){
+        var nextF = newF[0].split('\r').slice(-1)[0] + newF[1];
+        S = S.split(F).join(nextF);
+        F = nextF;
+        arr = S.split(F);
+      } else return;
+    } else return;
+  }
+  S = arr;
+  stream.last = '';
+  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
+  S.forEach(function(s,v,t,p){ if(!(t = s.flat()).trim()){ return }
+    (p = B.new('p')).append(t); (v = B.new('div')).append(p); shell.append(v);
+    cmd = t.cut(['\r\n','\n','\r'],ESC)[0]; // 1st line
+    //console.log(s, [cmd], CMD[cmd], Object.keys(CMD));
+    cmd = cmd.trim().split(/\s+/)[0].trim(); // 1st word
+    var i = B.new('iframe');
+    i.src = './cmd/'+cmd+'.html';
+    v.append(i);
+    kit.ear('load', function(eve){
+      if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
+      if(eve.target !== i) return;
+      kit.say(s,cmd, i.contentWindow);
+      var p = v.all('p')[0];
+      if(p) p.remove();
+    }, i);
+    //(tmp = CMD[cmd]) && tmp(s,v);
+  });
+  if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
+}
+}());
+//kit.ear('clear',eve=>{console.log(1); shell.innerHTML = "";});
+CMD.cd = function(s,v){
+  var t = s.flat();
+  if(t.toLowerCase().includes('not a directory')){
+    v.style.display = 'none';
+    var cmdLine = t.cut(['\r\n','\n','\r'],ESC)[0];
+    var file = cmdLine.trim().replace(/^cd\s+/,'').trim();
+    if(file){ chat.prompt('cat "' + file + '"'); }
+  }
+}
+
+var f = "\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$";
+var p = ["\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m clear\r\n\u001b[?2004l\r","\u001b[H\u001b[2J","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m ls .\r\n\u001b[?2004l\r","\u001b[0m\u001b[01;34m2022\u001b[0m         debug        index.html     \u001b[01;34mrandom\u001b[0m         tantra-training.html\r\nREADME.md    gemini.json  install.sh     settings.json  \u001b[01;34mtmp\u001b[0m\r\ncollab.html  git.html     prompt         ssh.js\r\n\u001b[01;34mcop\u001b[0m          git.js       property.html  \u001b[01;34msurviving\u001b[0m\r\n","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m "];
+
+//p.forEach(function(t){ setTimeout(function(){ stream(t) },1) });
+
+;(function(){ var key;
+window.AI = {
+  async shell(q){
+    var s, r = (await (await fetch("https://ch.at/"+encodeURIComponent(q))).text());
+    return r;
+    console.log("AI shell:", r);
+    return r.slice(s = r.indexOf("\nA:")+4, r.indexOf("</textarea>")).trim();
+  },
+  async ask(q){
+    var s, r = (await (await fetch("https://ch.at/"+encodeURIComponent(q))).text());
+    return r.slice(s = r.indexOf("\nA:")+4, r.indexOf("</textarea>")).trim();
+  },
+  async spell(w){
+    return this.ask('TEXT ONLY NO HTML spell correct & add next predicted word to this sentence: '+w);
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{role:'system',content:"Super genius coding assistant, hep with this code:"+code},{ role: "user", content: "Fix spelling: 'I hav a qustion'" }],
+        max_tokens: 15,
+        temperature: 0,
+        provider: { sort: "latency" },
+        stream: false
+      }),
+    });
+  },
+  async code(q, code, path){ console.log("ask OR", q, code, path);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST", headers: { "Authorization": "Bearer "+await AI.key(), "Content-Type": "application/json",
+        //'HTTP-Referer': window.location.href, // be ranked?
+        'X-Title': 'Code on Phone'
+      }, body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{role:'system',content:"IMPORTANT: REPLY WITH ONLY CODE, NO EXPLAIN!!! You are a super genius John Carmack but of "+(path||"performance coding")+", it has 10M+ monthly users on decade+ old low end netbooks, so help me with blazing fast, low dependency, simple clean code for: ```"+code},{ role: "user", content: q }],
+        max_tokens: 100_000,
+        temperature: 0.7,
+        stream: false
+      }),
+    });
+    return await response.json();
+  },
+  async key(){
+    return key || (key = localStorage.ork || (localStorage.ork = await UI.prompt(`openrouter key?`)));
+  }
+}}());
+
+
+}(window.chat = function(){
+
+}));
+</script>

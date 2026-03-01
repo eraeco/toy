@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="mkdir-box">
+  <div class="icon-wrap"><div class="icon">📁✨</div></div>
+  <div class="text">CREATED <span id="fname" class="highlight"></span></div>
+</div>
+<style>
+.mkdir-box {
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5em; margin: 0.5em 0;
+  background: linear-gradient(45deg, rgba(46, 213, 115, 0.2), rgba(0,0,0,0.8));
+  border: 2px solid #2ed573;
+  border-radius: 20px;
+  box-shadow: 0 0 15px rgba(46, 213, 115, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mkdir-box:active { transform: scale(0.95); background: #2ed573; color: black; }
+.icon-wrap { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 50%; margin-right: 15px; border: 2px dashed #2ed573; animation: spin 10s linear infinite; }
+.icon { font-size: 3em; animation: counter-spin 10s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes counter-spin { 100% { transform: rotate(-360deg); } }
+.text { font-size: 1.5em; font-family: 'Courier New', monospace; font-weight: bold; color: #2ed573; text-shadow: 0 0 8px #2ed573; }
+.mkdir-box:active .text { color: black; text-shadow: none; }
+.highlight { color: white; text-transform: uppercase; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; }
+.error { border-color: #ff4757; box-shadow: 0 0 15px #ff4757; background: rgba(255, 71, 87, 0.2); }
+.error .text, .error .icon-wrap { color: #ff4757; border-color: #ff4757; }
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('mkdir', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  var output = lines.slice(1).join('\n').trim();
+
+  var name = cmdLine.replace(/^mkdir\s+(?:-p\s+)?/, '').trim();
+  
+  if (output && (output.toLowerCase().includes('exist') || output.toLowerCase().includes('denied'))) {
+    container.classList.add('error');
+    container.querySelector('.text').innerText = `ERROR ` + output.substring(0, 20) + `...`;
+    container.querySelector('.icon').innerText = '❌';
+  } else {
+    fname.innerText = name;
+  }
+  
+  container.onclick = () => { kit.say('ls .', 'prompt'); };
+  hear.off();
+});
+</script>

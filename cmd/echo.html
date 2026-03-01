@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="echo-box">
+  <div class="speech-bubble" id="content"></div>
+</div>
+<style>
+.echo-box {
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: 1em; margin: 0.5em 0;
+}
+.speech-bubble {
+  position: relative;
+  background: #ff00aa;
+  border-radius: 20px 20px 20px 0;
+  padding: 1.5em;
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 1.4em;
+  font-weight: bold;
+  box-shadow: 0 10px 20px rgba(255, 0, 170, 0.3), inset 0 0 10px rgba(255,255,255,0.5);
+  max-width: 90%;
+  word-wrap: break-word;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -15px;
+  width: 0;
+  height: 0;
+  border: 15px solid transparent;
+  border-right-color: #ff00aa;
+  border-bottom-color: #ff00aa;
+  border-radius: 0 0 0 20px;
+}
+@keyframes popIn {
+  0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('echo', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  // First line is usually "echo foo", skip it.
+  var text = lines.slice(1).join('\n').trim();
+  content.innerText = text || lines[0].replace(/^echo\s+/,'') || " ";
+  hear.off();
+});
+</script>

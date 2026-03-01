@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="mv-box">
+  <div class="icon">🚚💨</div>
+  <div class="text">MOVED <br><span id="details" class="subtext"></span></div>
+</div>
+<style>
+.mv-box {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 1.5em; margin: 0.5em 0;
+  background: linear-gradient(90deg, rgba(241, 196, 15, 0.2), rgba(0,0,0,0.8));
+  border: 2px solid #f1c40f;
+  border-radius: 16px;
+  box-shadow: 0 0 20px rgba(241, 196, 15, 0.4);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.mv-box:active { transform: scale(0.95); background: #f1c40f; }
+.mv-box:active * { color: black !important; text-shadow: none !important; }
+.icon { font-size: 3.5em; margin-right: 20px; filter: drop-shadow(0 0 10px #f1c40f); animation: drive 2s ease-in-out infinite alternate; }
+@keyframes drive { 0% { transform: translateX(-10px); } 100% { transform: translateX(10px); } }
+.text { font-size: 1.5em; font-family: 'Courier New', monospace; font-weight: bold; color: #f1c40f; text-shadow: 0 0 5px #f1c40f; }
+.subtext { font-size: 0.7em; color: white; opacity: 0.9; }
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('mv', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  var args = cmdLine.replace(/^mv\s+(?:-[a-zA-Z]+\s+)?/, '').split(/\s+/);
+  var dest = args.pop();
+  var src = args.join(' ');
+  
+  if(dest) {
+    details.innerText = src + " 
+⬇️
+ " + dest;
+  } else {
+    details.innerText = "UNKNOWN";
+  }
+  
+  container.onclick = () => { kit.say('ls .', 'prompt'); };
+  hear.off();
+});
+</script>

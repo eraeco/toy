@@ -1,0 +1,96 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="ping-box">
+  <div class="header">
+    <div class="icon">📡</div>
+    <div class="title">RADAR: <span id="host" class="highlight"></span></div>
+  </div>
+  <div class="radar-container">
+    <div class="radar">
+      <div class="sweep"></div>
+      <div class="blip"></div>
+    </div>
+  </div>
+  <pre id="results" class="results-list"></pre>
+</div>
+<style>
+.ping-box {
+  background: rgba(10, 15, 25, 0.95);
+  border: 2px solid #00d2ff;
+  border-radius: 12px;
+  margin: 1em 0;
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.3), transparent);
+  border-bottom: 2px solid #00d2ff;
+  padding: 1em;
+  display: flex; align-items: center;
+}
+.icon { font-size: 2em; margin-right: 15px; filter: drop-shadow(0 0 10px #00d2ff); }
+.title { font-family: 'Courier New', monospace; font-size: 1.4em; font-weight: 900; color: white; text-shadow: 0 0 5px #00d2ff; }
+.highlight { color: #00d2ff; }
+.radar-container {
+  display: flex; justify-content: center; padding: 20px;
+}
+.radar {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  border: 2px solid #00d2ff;
+  position: relative;
+  background: radial-gradient(circle, rgba(0, 210, 255, 0.1) 0%, transparent 70%);
+  overflow: hidden;
+}
+.radar::before, .radar::after {
+  content: ''; position: absolute; background: rgba(0, 210, 255, 0.3);
+}
+.radar::before { top: 50%; left: 0; width: 100%; height: 1px; }
+.radar::after { left: 50%; top: 0; height: 100%; width: 1px; }
+.sweep {
+  position: absolute; top: 0; left: 50%; width: 50%; height: 50%;
+  background: conic-gradient(from 0deg, transparent 70%, rgba(0, 210, 255, 0.8) 100%);
+  transform-origin: bottom left;
+  animation: sweep 2s linear infinite;
+}
+@keyframes sweep { to { transform: rotate(360deg); } }
+.blip {
+  width: 6px; height: 6px; background: #fff; border-radius: 50%; position: absolute;
+  top: 30px; left: 60px; box-shadow: 0 0 10px #fff, 0 0 20px #00d2ff;
+  animation: fadeblip 2s infinite;
+}
+@keyframes fadeblip { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+.results-list {
+  padding: 1em; margin: 0;
+  max-height: 30vh;
+  overflow-y: auto;
+  font-family: monospace; font-size: 1.1em; color: #00d2ff;
+  white-space: pre-wrap; word-break: break-all;
+  background: rgba(0,0,0,0.5);
+  border-top: 1px solid rgba(0, 210, 255, 0.3);
+}
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 1;
+kit.ear('ping', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  var match = cmdLine.match(/ping\s+(?:-[a-zA-Z0-9]+\s+)*([^\s]+)/);
+  host.innerText = match ? match[1] : "UNKNOWN";
+  
+  var outLines = lines.slice(1).join('\n');
+  var atBottom = results.scrollHeight - results.scrollTop - results.clientHeight < 50;
+  results.textContent = outLines;
+  
+  // Auto-scroll
+  if(atBottom) results.scrollTop = results.scrollHeight;
+  
+  // Re-listen in case ping streams output (if the system supports streaming to iframe)
+  // Actually, hear() handles it if we don't turn it off immediately. But usually it's passed as a single block from bash.
+  // We'll leave it as a block for now, or just turn off.
+  hear.off();
+});
+</script>

@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <title>Code on Phone | The $999 COP</title>
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --bg: #030005; /* Deep Void Purple */
+            --card-bg: rgba(20, 5, 25, 0.4);
+            --primary: #d946ef; /* Electric Purple */
+            --primary-dim: rgba(217, 70, 239, 0.2);
+            --accent: #a855f7;
+            --white: #ffffff;
+            --text-muted: #cbd5e1;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--white);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- THREE.JS BACKGROUND --- */
+        #canvas-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        /* --- LAYOUT UTILITIES --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 4vmax;
+            position: relative;
+            z-index: 10;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 4rem; align-items: center; }
+        .grid-3 { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+
+        @media (min-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr 1fr; }
+            .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* --- TYPOGRAPHY & GLOWS --- */
+        h1 {
+            font-size: 3.5rem;
+            line-height: 1.1;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 30px rgba(217, 70, 239, 0.3);
+        }
+
+        .highlight-text {
+            color: transparent;
+            background: linear-gradient(90deg, #fff, var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 0 0 40px var(--primary-dim);
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        /* --- BUTTONS WITH RIPPLE --- */
+        .btn-glow {
+            position: relative;
+            display: inline-flex;
+            padding: 18px 40px;
+            font-weight: 700;
+            text-decoration: none;
+            color: white;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: 0.3s;
+            box-shadow: 0 0 15px var(--primary-dim), inset 0 0 15px var(--primary-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-glow:hover {
+            box-shadow: 0 0 40px var(--primary), inset 0 0 20px var(--primary);
+            text-shadow: 0 0 10px white;
+            background: rgba(217, 70, 239, 0.1);
+            transform: scale(1.02);
+        }
+
+        /* --- FEATURE CARDS (THE SEXY PART) --- */
+        .glass-card {
+            position: relative;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 300px; /* Fixed height for canvas */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .glass-card canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        .glass-card:hover canvas { opacity: 0.6; }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 50px -10px rgba(217, 70, 239, 0.3);
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 2;
+            pointer-events: none; /* Let clicks pass to card */
+        }
+
+        .card-icon { font-size: 2.5rem; margin-bottom: 1rem; text-shadow: 0 0 20px var(--primary); }
+        .card-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: white; }
+        .card-desc { font-size: 0.95rem; color: var(--text-muted); }
+
+        /* --- PHONE MOCKUP --- */
+        .phone-wrapper {
+            perspective: 1000px;
+            display: flex;
+            justify-content: center;
+            height: 650px;
+            margin-top: 1em;
+        }
+
+        .phone {
+            width: 320px;
+            height: 640px;
+            background: #000;
+            border-radius: 45px;
+            box-shadow: 
+                0 0 0 2px #1a1a1a,
+                0 0 0 4px #000,
+                0 0 100px rgba(217, 70, 239, 0.25); /* Purple Halo */
+            position: relative;
+            transform: rotateY(-10deg) rotateX(5deg);
+            transition: transform 0.5s ease;
+            overflow: hidden;
+            border: 4px solid #333;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .phone:hover { transform: rotateY(0) rotateX(0); }
+
+        .notch {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 120px; height: 30px; background: #000;
+            border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;
+            z-index: 20;
+        }
+
+        .screen {
+            background: #09090b; 
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+        }
+
+        .code-editor {
+            flex: 1; padding: 40px 20px 20px 20px;
+            font-family: 'Courier New', monospace; font-size: 12px;
+            color: #e4e4e7; line-height: 1.6;
+            position: relative;
+        }
+        
+        /* Syntax highlighting - PURPLE THEME */
+        .token-k { color: #d946ef; font-weight: bold; } /* Keyword */
+        .token-f { color: #fff; text-shadow: 0 0 5px white; } /* Function */
+        .token-s { color: #a855f7; } /* String */
+        .token-c { color: #52525b; font-style: italic; } /* Comment */
+
+        .keyboard {
+            background: rgba(10, 5, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(217, 70, 239, 0.3);
+            padding: 10px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .key-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        
+        .key {
+            background: rgba(255,255,255,0.05);
+            color: white;
+            height: 45px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.1s;
+            border: 1px solid transparent;
+        }
+
+        .key:active { background: var(--primary); transform: scale(0.95); }
+        .key.special { color: var(--primary); border: 1px solid rgba(217, 70, 239, 0.3); }
+        .key.action { 
+            background: var(--primary); 
+            grid-column: span 2; 
+            box-shadow: 0 0 15px var(--primary-dim);
+            text-shadow: 0 0 5px white;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotateY(-10deg); }
+            50% { transform: translateY(-20px) rotateY(-10deg); }
+        }
+        @keyframes pulse-border {
+            0% { border-color: rgba(217, 70, 239, 0.2); }
+            50% { border-color: rgba(217, 70, 239, 0.8); box-shadow: 0 0 30px var(--primary-dim); }
+            100% { border-color: rgba(217, 70, 239, 0.2); }
+        }
+
+        /* --- PRICING --- */
+        .price-container {
+            border: 2px solid var(--primary);
+            background: radial-gradient(circle at center, rgba(217,70,239,0.1), transparent 80%);
+            animation: pulse-border 4s infinite;
+        }
+
+
+ .sexy-purple-btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        padding: 16px 32px;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #030005; /* Dark text for contrast against bright button */
+        background: linear-gradient(90deg, #d946ef, #a855f7); /* Electric Purple to Violet */
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(217, 70, 239, 0.4);
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sexy-purple-btn:hover {
+        opacity: 0.95;
+        box-shadow: 0 0 40px rgba(217, 70, 239, 0.7);
+        transform: translateY(-2px);
+    }
+
+    .sexy-purple-btn svg {
+        margin-left: 8px;
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        stroke-width: 3;
+        fill: none;
+    }
+
+
+
+       .btn-nebula {
+        position: relative;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        padding: 18px 40px;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: black;
+        text-decoration: none;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: #000; /* Fallback */
+        box-shadow: 0 0 25px rgba(217, 70, 239, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    /* 1. The Moving Liquid Gradient (The "Juice") */
+    .btn-nebula::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle at center, #d946ef 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, #7c3aed 0%, transparent 50%),
+                    radial-gradient(circle at 20% 80%, #a855f7 0%, transparent 50%),
+                    #2e1065; /* Deep base */
+        background-size: 150% 150%;
+        animation: nebula-flow 6s ease-in-out infinite alternate;
+        z-index: 1;
+        opacity: 0.9;
+    }
+
+    /* 2. The Tech Mesh Overlay (The "Structure") */
+    .btn-nebula::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-image: radial-gradient(rgba(255,255,255,0.2) 1px, transparent 1px);
+        background-size: 10px 10px; /* Tiny dots */
+        opacity: 0.3;
+        z-index: 2;
+        mix-blend-mode: overlay;
+    }
+
+    /* 3. Text & Icon (On Top) */
+    .btn-nebula span, 
+    .btn-nebula svg {
+        position: relative;
+        z-index: 3;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+
+    /* Hover States */
+    .btn-nebula:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 50px rgba(217, 70, 239, 0.6);
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+    
+    .btn-nebula:hover::before {
+        filter: brightness(1.2);
+        animation-duration: 4s; /* Speed up flow on hover */
+    }
+
+    /* Animations */
+    @keyframes nebula-flow {
+        0% { transform: translate(-10%, -10%) rotate(0deg); }
+        100% { transform: translate(10%, 10%) rotate(10deg); }
+    }
+
+    .btn-nebula svg {
+        margin-left: 10px;
+        width: 20px;
+        height: 20px;
+        stroke-width: 3;
+    }
+    </style>
+</head>
+<body>
+
+    <!-- GLOBAL BACKGROUND -->
+    <canvas id="canvas-bg"></canvas>
+
+    <!-- NAV -->
+    <nav style="top: 0; width: 100%; z-index: 50; padding: 20px;">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 900; font-size: 1.5rem; letter-spacing: -1px; text-shadow: 0 0 15px var(--primary);">
+            </div>
+            <a href="app.html" style="color: #fff; text-decoration: none; font-size: 0.9rem; opacity: 0.8;">Enterprise Login</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section style="min-height: 100vh; position: relative;">
+        <!-- Asymmetric Background Blob -->
+        <div style="position: absolute; top: 20%; right: -10%; width: 600px; height: 600px; background: radial-gradient(circle, var(--primary) 0%, transparent 70%); opacity: 0.15; filter: blur(80px); z-index: -1;"></div>
+
+        <div class="container">
+            <div class="grid-2">
+                <!-- TEXT -->
+                <div>
+                    <h1>
+                        Squeeze<br>
+                        <span class="highlight-text">
+                        more Work Out<br>
+                        of your Employees.</span>
+                    </h1>
+                    <p class="subtitle">they're cheating on you with AI. regain productivity by having them Code on Phone from a train, plane, uber, walks, toilet stall, anywhere at all - <i>no excuses</i>, we're not shitting u.<br><br>
+                        <span style="color:white; font-weight:bold;">$999/mo per seat.</span>
+                    </p>
+                    <div style="display: flex; gap: 20px;">
+                        <a href="#" class="sexy-purple-btn">
+                            <span>Contact Sales</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                        <a href="#sales" class="btn-glow">Watch Trailer</a>
+                    </div>
+                </div>
+
+                <!-- PHONE -->
+                <div class="phone-wrapper">
+                    <div class="phone">
+                        <div class="notch"></div>
+                        <div class="screen">
+                            <!-- Status Bar -->
+                            <div style="display:flex; justify-content:space-between; padding:12px 20px; font-size:10px; font-weight:bold; color:#666;">
+                                <span>10:42 PM</span>
+                                <span>5G // BATHROOM</span>
+                            </div>
+
+                            <!-- Code Editor -->
+                            <div class="code-editor">
+                                <div class="token-c">// Detecting location...</div>
+                                <br>
+                                <div><span class="token-k">fn</span> <span class="token-f">optimize_workflow</span>() {</div>
+                                <div style="padding-left:15px;">
+                                    <span class="token-k">let</span> user_loc = <span class="token-s">"TOILET"</span>;
+                                </div>
+                                <div style="padding-left:15px;">
+                                    <span class="token-k">if</span> user_loc == <span class="token-s">"TOILET"</span> {
+                                </div>
+                                <div style="padding-left:30px;">
+                                    <span class="token-c">// Enable fat-thumb mode</span>
+                                </div>
+                                <div style="padding-left:30px;">
+                                    IDE.<span class="token-f">ui_scale</span>(2.0);
+                                </div>
+                                <div style="padding-left:30px;">
+                                    <span class="token-f">send_alert</span>(<span class="token-s">"WORKING"</span>);
+                                </div>
+                                <div style="padding-left:15px;">}</div>
+                                <div>} <span style="display:inline-block; width:2px; height:12px; background:var(--primary); animation:pulse-border 1s infinite;"></span></div>
+                            </div>
+
+                            <!-- Thumb Keyboard -->
+                            <div class="keyboard">
+                                <!-- Predictive Row -->
+                                <div style="display:flex; gap:8px; overflow:hidden; padding-bottom:5px;">
+                                    <div style="background:rgba(217,70,239,0.2); color:var(--primary); padding:4px 10px; border-radius:4px; font-size:10px;">fn</div>
+                                    <div style="background:rgba(217,70,239,0.2); color:var(--primary); padding:4px 10px; border-radius:4px; font-size:10px;">pub</div>
+                                    <div style="background:rgba(217,70,239,0.2); color:var(--primary); padding:4px 10px; border-radius:4px; font-size:10px;">impl</div>
+                                    <div style="background:rgba(217,70,239,0.2); color:var(--primary); padding:4px 10px; border-radius:4px; font-size:10px;">async</div>
+                                </div>
+                                <!-- Keys -->
+                                <div class="key-row">
+                                    <div class="key special">{</div>
+                                    <div class="key special">}</div>
+                                    <div class="key special">(</div>
+                                    <div class="key special">)</div>
+                                    
+                                    <div class="key">"</div>
+                                    <div class="key">;</div>
+                                    <div class="key">=</div>
+                                    <div class="key">></div>
+
+                                    <div class="key" style="grid-column: span 2; font-size:10px;">SPACE</div>
+                                    <div class="key action">COMMIT</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES WITH CANVAS EFFECTS -->
+    <section style="padding: 100px 0; position: relative;">
+        <!-- Asymmetric Decoration -->
+        <div style="position: absolute; left: 0; bottom: 0; width: 100%; height: 200px; background: linear-gradient(to top, var(--bg), transparent); z-index: 5;"></div>
+        
+        <div class="container">
+            <h2 style="text-align: center; margin-bottom: 60px; font-size: 2.5rem;">
+                Anywhere at all. <span style="color:var(--primary)">Literally.</span>
+            </h2>
+            
+            <div class="grid-3">
+                <!-- CARD 1: TRAIN -->
+                <div class="glass-card" id="card-train">
+                    <canvas id="canvas-train"></canvas>
+                    <div class="card-content">
+                        <div class="card-icon">🚇</div>
+                        <div class="card-title">Commute Mode</div>
+                        <div class="card-desc">Simulates a 400mph coding environment. Merges PRs automatically based on train velocity.</div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: TOILET -->
+                <div class="glass-card" id="card-toilet">
+                    <canvas id="canvas-toilet"></canvas>
+                    <div class="card-content">
+                        <div class="card-icon">🚽</div>
+                        <div class="card-title">Stall Suite</div>
+                        <div class="card-desc">One-handed UI designed for sanitary environments. Swipe-left to Refactor.</div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: AI -->
+                <div class="glass-card" id="card-ai">
+                    <canvas id="canvas-ai"></canvas>
+                    <div class="card-content">
+                        <div class="card-icon">👁️</div>
+                        <div class="card-title">Anti-Slacking</div>
+                        <div class="card-desc">We track pupil dilation. If they look away from the phone, we deduct pay.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing" style="padding: 100px 0; text-align: center;">
+        <div class="container">
+            <div class="glass-card price-container" style="max-width: 600px; margin: 0 auto; padding: 60px; height: auto;">
+                <div style="font-size: 0.9rem; letter-spacing: 2px; color: var(--primary); margin-bottom: 20px; font-weight: bold;">CORPORATE LICENSE</div>
+                <h2 style="font-size: 5rem; margin: 10px 0; line-height: 1; text-shadow: 0 0 40px var(--primary); color: white;">$999</h2>
+                <p style="font-size: 1.2rem; color: #fff;">/mo per seat</p>
+                
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0;">
+                
+                <ul style="text-align: left; list-style: none; margin-bottom: 40px; color: #ccc; padding-left: 20px;">
+                    <li style="margin-bottom: 10px">✓ Remote Wipe Capability</li>
+                    <li style="margin-bottom: 10px">✓ Biometric Sweat Detection</li>
+                    <li style="margin-bottom: 10px">✓ 24/7 Boss-View™ Cam Access</li>
+                </ul>
+
+                <a href="#" class="btn-glow" style="width: 100%; justify-content: center;">Buy Control</a>
+            </div>
+        </div>
+    </section>
+
+    <footer style="padding: 50px 0; text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid rgba(255,255,255,0.05);">
+        ThumbForce Inc. © 2026. Handcrafted in Vim (on a phone).
+    </footer>
+
+    <!-- DEPENDENCIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        /* ==========================================
+           1. THREE.JS GLOBAL BACKGROUND
+           ========================================== */
+        const bgScene = new THREE.Scene();
+        const bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const bgRenderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas-bg'), alpha: true });
+        
+        bgRenderer.setSize(window.innerWidth, window.innerHeight);
+        bgRenderer.setPixelRatio(window.devicePixelRatio);
+
+        // Create a "Digital Terrain" Grid
+        const gridGeo = new THREE.PlaneGeometry(100, 100, 40, 40);
+        const gridMat = new THREE.MeshBasicMaterial({ 
+            color: 0xd946ef, // Purple
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15
+        });
+        const grid = new THREE.Mesh(gridGeo, gridMat);
+        grid.rotation.x = -Math.PI / 2;
+        grid.position.y = -10;
+        bgScene.add(grid);
+
+        // Floating Particles
+        const particlesGeo = new THREE.BufferGeometry();
+        const particleCount = 400;
+        const posArray = new Float32Array(particleCount * 3);
+        
+        for(let i = 0; i < particleCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 50;
+        }
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMat = new THREE.PointsMaterial({ size: 0.1, color: 0xffffff, transparent: true, opacity: 0.5 });
+        const particleMesh = new THREE.Points(particlesGeo, particlesMat);
+        bgScene.add(particleMesh);
+
+        bgCamera.position.z = 10;
+        bgCamera.position.y = 2;
+
+        let mouseX = 0;
+        let mouseY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX / window.innerWidth - 0.5;
+            mouseY = e.clientY / window.innerHeight - 0.5;
+        });
+
+        function animateBg() {
+            requestAnimationFrame(animateBg);
+            
+            // Grid Wave Effect
+            const time = Date.now() * 0.001;
+            const positions = grid.geometry.attributes.position;
+            
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const y = positions.getY(i); // This is actually Z because of rotation
+                // Create a rolling wave
+                const z = Math.sin(x * 0.5 + time) * 1.5 + Math.cos(y * 0.5 + time) * 1.5;
+                positions.setZ(i, z);
+            }
+            positions.needsUpdate = true;
+
+            // Camera Sway
+            bgCamera.position.x += (mouseX * 5 - bgCamera.position.x) * 0.05;
+            bgCamera.position.y += (-mouseY * 5 + 2 - bgCamera.position.y) * 0.05;
+            bgCamera.lookAt(0, 0, 0);
+
+            bgRenderer.render(bgScene, bgCamera);
+        }
+        animateBg();
+
+        window.addEventListener('resize', () => {
+            bgCamera.aspect = window.innerWidth / window.innerHeight;
+            bgCamera.updateProjectionMatrix();
+            bgRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        /* ==========================================
+           2. CANVAS EFFECTS FOR CARDS
+           ========================================== */
+        
+        // Helper: Resize canvas to parent
+        function initCanvas(id) {
+            const c = document.getElementById(id);
+            const ctx = c.getContext('2d');
+            const parent = c.parentElement;
+            c.width = parent.offsetWidth;
+            c.height = parent.offsetHeight;
+            return { c, ctx, w: c.width, h: c.height };
+        }
+
+        // --- TRAIN EFFECT (Speed Lines) ---
+        (function() {
+            const { c, ctx, w, h } = initCanvas('canvas-train');
+            const lines = [];
+            for(let i=0; i<20; i++) lines.push({ x: Math.random()*w, y: Math.random()*h, l: Math.random()*50+10, s: Math.random()*10+5 });
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                ctx.strokeStyle = 'rgba(217, 70, 239, 0.5)';
+                ctx.lineWidth = 2;
+                
+                lines.forEach(line => {
+                    ctx.beginPath();
+                    ctx.moveTo(line.x, line.y);
+                    ctx.lineTo(line.x - line.l, line.y); // Moving left
+                    ctx.stroke();
+                    
+                    line.x -= line.s;
+                    if(line.x < 0) {
+                        line.x = w + Math.random() * 50;
+                        line.y = Math.random() * h;
+                    }
+                });
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        // --- TOILET EFFECT (Radar Pulse) ---
+        (function() {
+            const { c, ctx, w, h } = initCanvas('canvas-toilet');
+            let radius = 0;
+            
+            function draw() {
+                // Fade out trail
+                ctx.fillStyle = 'rgba(20, 5, 25, 0.1)'; 
+                ctx.fillRect(0, 0, w, h);
+                
+                radius += 2;
+                if(radius > w) radius = 0;
+
+                ctx.beginPath();
+                ctx.arc(w/2, h, radius, 0, Math.PI * 2); // Pulse from bottom center
+                ctx.strokeStyle = `rgba(217, 70, 239, ${1 - radius/w})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        // --- AI EFFECT (Scanning/Matrix) ---
+        (function() {
+            const { c, ctx, w, h } = initCanvas('canvas-ai');
+            const drops = [];
+            const columns = Math.floor(w / 10);
+            for(let i=0; i<columns; i++) drops[i] = Math.random() * h;
+
+            function draw() {
+                ctx.fillStyle = 'rgba(20, 5, 25, 0.1)';
+                ctx.fillRect(0, 0, w, h);
+                
+                ctx.fillStyle = '#d946ef';
+                ctx.font = '10px monospace';
+                
+                for(let i=0; i<drops.length; i++) {
+                    const text = Math.random() > 0.5 ? '1' : '0';
+                    ctx.fillText(text, i*10, drops[i]);
+                    
+                    if(drops[i] * 10 > h && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="cp-box">
+  <div class="icon">📑 ➡️ 📑</div>
+  <div class="text">COPIED <br><span id="details" class="subtext"></span></div>
+</div>
+<style>
+.cp-box {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 1.5em; margin: 0.5em 0;
+  background: linear-gradient(180deg, rgba(52, 152, 219, 0.2), rgba(0,0,0,0.8));
+  border: 2px solid #3498db;
+  border-radius: 16px;
+  box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.cp-box:active { transform: scale(0.95); background: #3498db; }
+.cp-box:active * { color: black !important; text-shadow: none !important; }
+.icon { font-size: 3em; margin-right: 20px; filter: drop-shadow(0 0 10px #3498db); }
+.text { font-size: 1.5em; font-family: 'Courier New', monospace; font-weight: bold; color: #3498db; text-shadow: 0 0 5px #3498db; }
+.subtext { font-size: 0.7em; color: white; opacity: 0.9; }
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 1;
+kit.ear('cp', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  var args = cmdLine.replace(/^cp\s+(?:-[a-zA-Z]+\s+)?/, '').split(/\s+/);
+  var dest = args.pop();
+  var src = args.join(' ');
+  
+  if(dest) {
+    details.innerText = src + " 
+⬇️
+ " + dest;
+  } else {
+    details.innerText = "UNKNOWN";
+  }
+  
+  container.onclick = () => { kit.say('ls .', 'prompt'); };
+  hear.off();
+});
+</script>

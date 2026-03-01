@@ -1,0 +1,49 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<form id="sign" onsubmit="cop.sign()">
+  <input id="host" name="host" placeholder="host:" class="fog sap lip">
+  <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
+  <button type="submit"></button>
+</form>
+<style>
+:root { --fill: var(--mood); }
+body { back-ground-image: url('https://picsum.photos/1200/900'); }
+iframe { width: 100%; }
+input::placeholder { opacity: 1; }
+</style>
+<script>;(function(cop){
+host.focus();
+//console.off=1;
+cop.sign = async ()=>{ if(cop.ws){ return }
+  cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
+  cop.ws.onopen = ()=>{
+    console.log('ws open');
+    cop.ws.send(localStorage.pass=pass.value);
+    cop.ws.send('ls .\r');
+    location.path = 'chat.html';
+  };
+
+  cop.ws.onmessage = (eve) => {
+    //console.log('app ws msg');//, eve.data);
+    kit.say(eve.data,'chat');
+  };
+
+  cop.ws.onerror = (error) => {
+    console.error('ws err:', error);
+  };
+
+  cop.ws.onclose = (eve) => { cop.ws=0;
+    //chat.style.display = 'grid';
+    console.log('ws close:', eve.code, 'Reason:', eve.reason);
+  };
+}
+(pass.value = localStorage.pass||'') && cop.sign();
+
+kit.ear('host',(eve)=>{
+  if(!cop.ws){ return } // maybe attempt reconnect?
+  var cmd = eve.detail||eve.data;
+  if('string' != typeof cmd){ return }
+  cop.ws.send(cmd);
+});
+
+}(window.cop = {}));
+</script>

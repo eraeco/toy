@@ -1,0 +1,47 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="rm-box">
+  <div class="icon">💥</div>
+  <div class="text">DESTROYED <span id="fname" class="highlight"></span></div>
+</div>
+<style>
+.rm-box {
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5em; margin: 0.5em 0;
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.3), rgba(0,0,0,0.8));
+  border: 3px solid #ff4757;
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(255, 71, 87, 0.6), inset 0 0 10px rgba(255, 71, 87, 0.4);
+  cursor: pointer;
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+.icon { font-size: 4em; margin-right: 15px; filter: drop-shadow(0 0 15px #ff4757); }
+.text { font-size: 1.8em; font-family: 'Courier New', monospace; font-weight: 900; color: #ff4757; text-shadow: 0 0 10px #ff4757; }
+.highlight { color: white; background: #ff4757; padding: 2px 10px; border-radius: 4px; box-shadow: 0 0 10px #ff4757; text-shadow: none; }
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('rm', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  var output = lines.slice(1).join('\n').trim();
+
+  var name = cmdLine.replace(/^rm\s+(?:-[rRfi]+\s+)?/, '').trim();
+  
+  if (output && output.toLowerCase().includes('no such file')) {
+    container.querySelector('.text').inner Text = `NOT FOUND ` + name + ``;
+    container.querySelector('.icon').innerText = '👻';
+  } else {
+    fname.innerText = name;
+  }
+  
+  container.onclick = () => { kit.say('ls .', 'prompt'); };
+  hear.off();
+});
+</script>

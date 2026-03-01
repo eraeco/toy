@@ -1,0 +1,104 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="grep-box">
+  <div class="header">
+    <div class="icon">👁️‍🗨️</div>
+    <div class="title">GREP: <span id="query" class="highlight"></span></div>
+  </div>
+  <div id="results" class="results-list"></div>
+</div>
+<style>
+.grep-box {
+  background: rgba(10, 5, 20, 0.95);
+  border: 2px solid #a855f7;
+  border-radius: 12px;
+  margin: 1em 0;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.3), transparent);
+  border-bottom: 2px solid #a855f7;
+  padding: 1em;
+  display: flex; align-items: center;
+}
+.icon { font-size: 2em; margin-right: 15px; filter: drop-shadow(0 0 10px #a855f7); animation: scan 2s ease-in-out infinite alternate; }
+@keyframes scan { 0% { transform: scale(0.9); } 100% { transform: scale(1.1); } }
+.title { font-family: 'Courier New', monospace; font-size: 1.3em; font-weight: 900; color: white; }
+.highlight { color: #d946ef; text-shadow: 0 0 10px #d946ef; }
+.results-list {
+  padding: 1em;
+  max-height: 50vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #a855f7 transparent;
+}
+.result-item {
+  background: rgba(255,255,255,0.05);
+  margin-bottom: 8px;
+  padding: 10px;
+  border-left: 4px solid #a855f7;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 1.1em;
+  color: #ccc;
+  word-break: break-all;
+  white-space: pre-wrap;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.result-item:hover { background: rgba(168, 85, 247, 0.2); transform: translateX(5px); }
+.match { color: #fff; background: #d946ef; padding: 0 4px; border-radius: 3px; font-weight: bold; }
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 1;
+kit.ear('grep', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  // Basic parsing to find the search term
+  var match = cmdLine.match(/grep\s+(?:-[a-zA-Z]+\s+)?['"]?([^'"]+)['"]?/);
+  var searchTerm = match ? match[1] : "SEARCH";
+  query.innerText = searchTerm;
+  
+  var outLines = lines.slice(1);
+  if (outLines.length === 0 || (outLines.length === 1 && !outLines[0].trim())) {
+    var empty = B.new('div');
+    empty.style.color = '#888';
+    empty.style.textAlign = 'center';
+    empty.style.padding = '1em';
+    empty.innerText = "NO MATCHES FOUND";
+    results.appendChild(empty);
+  } else {
+    outLines.forEach(l => {
+      if(!l.trim()) return;
+      var item = B.new('div');
+      item.className = 'result-item';
+      
+      // Simple highlight logic
+      var parts = l.split(new RegExp('('+searchTerm+')', 'gi'));
+      parts.forEach(p => {
+        if(p.toLowerCase() === searchTerm.toLowerCase() || p === searchTerm) {
+          var span = B.new('span');
+          span.className = 'match';
+          span.innerText = p;
+          item.appendChild(span);
+        } else {
+          item.appendChild(document.createTextNode(p));
+        }
+      });
+      
+      // If the line has a file format like `file.txt: match`, clicking it could open the file
+      var fileMatch = l.match(/^([^:]+):/);
+      if(fileMatch) {
+        item.onclick = () => { kit.say('cat ' + fileMatch[1], 'prompt.try'); };
+      }
+      
+      results.appendChild(item);
+    });
+  }
+  hear.off();
+});
+</script>
