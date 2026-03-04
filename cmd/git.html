@@ -1,0 +1,91 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="git-box">
+  <div class="header">
+    <div class="icon">🐙</div>
+    <div class="title">GIT: <span id="subcmd" class="highlight"></span></div>
+  </div>
+  <pre id="results" class="results-list"></pre>
+  <div class="actions">
+    <button class="fat-btn" onclick="kit.say('git status', 'prompt')">STATUS</button>
+    <button class="fat-btn" onclick="kit.say('git add .', 'prompt')">ADD ALL</button>
+    <button class="fat-btn" onclick="kit.say('git commit -m 'update'', 'prompt.try')">COMMIT</button>
+    <button class="fat-btn" onclick="kit.say('git push', 'prompt')">PUSH</button>
+  </div>
+</div>
+<style>
+.git-box {
+  background: rgba(15, 10, 20, 0.95);
+  border: 2px solid #ff0055;
+  border-radius: 12px;
+  margin: 1em 0;
+  box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(90deg, rgba(255, 0, 85, 0.3), transparent);
+  border-bottom: 2px solid #ff0055;
+  padding: 1em;
+  display: flex; align-items: center;
+}
+.icon { font-size: 2.5em; margin-right: 15px; filter: drop-shadow(0 0 10px #ff0055); animation: pulse 2s infinite; }
+.title { font-family: 'Courier New', monospace; font-size: 1.4em; font-weight: 900; color: white; }
+.highlight { color: #ff0055; text-shadow: 0 0 10px #ff0055; text-transform: uppercase; }
+.results-list {
+  padding: 1em;
+  margin: 0;
+  max-height: none;
+  overflow-y: visible;
+  font-family: monospace;
+  font-size: 1.1em;
+  color: #e0e0e0;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+  scrollbar-color: #ff0055 transparent;
+  letter-spacing: 0.1em;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 1em;
+  gap: 10px;
+  background: rgba(0,0,0,0.5);
+  border-top: 1px dashed rgba(255,0,85,0.5);
+}
+.fat-btn {
+  flex: 1 1 40%;
+  padding: 15px;
+  background: rgba(255, 0, 85, 0.2);
+  border: 2px solid #ff0055;
+  border-radius: 8px;
+  color: white;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: 0.2s;
+  text-shadow: 0 0 5px #ff0055;
+}
+.fat-btn:active {
+  background: #ff0055;
+  color: black;
+  transform: scale(0.95);
+  text-shadow: none;
+}
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('git', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  var args = cmdLine.replace(/^git\s+/, '').split(/\s+/);
+  subcmd.innerText = args[0] || "COMMAND";
+  
+  var outLines = lines.slice(1).join('\n');
+  results.textContent = outLines;
+  
+  hear.off();
+});
+</script>

@@ -1,0 +1,146 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="name">ls</div>
+<div id="list" class="ls">
+
+</div>
+<style>
+.ls { 
+  width: 100%; 
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  padding: 10px;
+display: block;
+  float: left;
+  column-width: 6em;
+
+  
+}
+  /* Global box-sizing fix */
+
+*, *::before, *::after {
+
+  box-sizing: border-box;
+
+}
+.ls a {
+display: block;
+  float: left;
+  margin: 0.1em; width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-h-eight: 1em;
+  padding: 1em 0.5em;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(191, 0, 255, 0.1), rgba(0,0,0,0.6));
+  border: 2px solid var(--pop);
+  border-radius: 16px;
+  backdrop-filter: blur(var(--blur));
+  
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  text-shadow: 0 0 5px var(--pop);
+  box-shadow: 0 5px 15px rgba(191, 0, 255, 0.2), inset 0 0 10px rgba(191, 0, 255, 0.1);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  word-break: break-word;
+  user-select: none;
+}
+.ls a:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+  text-shadow: none;
+  box-shadow: 0 0 30px var(--pop);
+}
+.icon {
+  font-size: 2.8em;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 10px var(--pop));
+}
+.folder-icon { color: #f1c40f; filter: drop-shadow(0 0 10px rgba(241,196,15,0.8)); text-shadow: none; }
+.file-icon { color: #00ffc8; filter: drop-shadow(0 0 10px rgba(0,255,200,0.8)); text-shadow: none; }
+  .file, .agh { border-color: white; background: pink; } 
+.header-cmd {
+display: block; width: 100%;
+  color: var(--pop);
+  font-weight: 900;
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  font-family: 'Courier New', monospace;
+  border-bottom: 2px dashed var(--pop);
+  padding-bottom: 5px;
+  text-shadow: 0 0 8px var(--pop);
+}
+</style>
+<script src="../util.js"></script>
+<script>
+
+kit.ear('ls',function hear(eve){
+  CMD.ls(eve.detail || eve.data, list);
+  hear.off();
+});
+
+CMD = {};
+CMD.ls = function(s,v,f,cmd){ 
+  v.tag('ls',+1).innerHTML = '';
+  cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
+  
+  B.all('#name')[0].innerText = cmd;
+
+  f = (s.indexOf('\t')+1)? '\t' : /\s+/;
+  s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
+  
+  var isBack = B.new('a');
+  isBack.innerHTML = '..';
+  isBack.dataset.val = '..';
+  v.append(isBack);
+
+  (s = s.split(f)).forEach((item,a)=>{
+    if(!(item = item.flat().trim())){ return }
+    if(item === '..') return;
+    
+    (a = B.new('a')).dataset.val = item;
+    
+    // Simple heuristic for file vs folder: folders usually don't have extensions, files do.
+    // Also hidden files start with .
+    var isFile = (item.includes('.') && item !== '.' && item !== '..');
+    fold = '' ;
+    if(!isFile) { fold = '/' } 
+    // For pure UI, let's just make it look cool based on this guess
+    
+    
+    a.innerHTML = item + fold;
+    v.append(a);
+  });
+  
+  CMD.ls.on = CMD.ls.on || (function(){ 
+    B.ear('pointerdown',(eve, el)=>{ el = eve.target;
+      var a = el.closest('a');
+      if(!a) return;
+      if(!a.closest('.ls')) return;
+      
+      var val = a.dataset.val;
+      if(val.includes('.') && val !== '..') {
+         kit.say('cat ' + val, 'prompt.try');
+      } else {
+         kit.say('cd ' + val, 'prompt.try');
+      }
+    });
+    B.ear('click',(eve, el)=>{ el = eve.target;
+      var a = el.closest('a');
+      if(!a) return;
+      if(!a.closest('.ls')) return;
+      
+      var val = a.dataset.val;
+      if(val.includes('.') && val !== '..') {
+        kit.say('', 'prompt');
+        kit.say('cat ' + val, 'prompt');
+      } else {
+        kit.say('', 'prompt');
+        kit.say('ls .', 'prompt');
+      }
+    })
+  }())||1;
+}
+</script>

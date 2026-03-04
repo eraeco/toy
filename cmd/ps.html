@@ -1,0 +1,113 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="ps-box">
+  <div class="header">
+    <div class="icon">👾</div>
+    <div class="title">TASK MANAGER</div>
+  </div>
+  <div id="results" class="results-list"></div>
+</div>
+<style>
+.ps-box {
+  background: rgba(10, 20, 10, 0.95);
+  border: 2px solid #00ff00;
+  border-radius: 12px;
+  margin: 1em 0;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(90deg, rgba(0, 255, 0, 0.3), transparent);
+  border-bottom: 2px solid #00ff00;
+  padding: 1em;
+  display: flex; align-items: center;
+}
+.icon { font-size: 2.5em; margin-right: 15px; filter: drop-shadow(0 0 10px #00ff00); animation: blink 1s step-end infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.title { font-family: 'Courier New', monospace; font-size: 1.4em; font-weight: 900; color: white; letter-spacing: 2px; text-shadow: 0 0 5px #00ff00; }
+.results-list {
+  padding: 1em;
+  max-height: 50vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #00ff00 transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ps-row {
+  display: flex;
+  justify-content: space-between;
+  background: rgba(0, 255, 0, 0.1);
+  padding: 10px;
+  border: 1px solid #00ff00;
+  border-radius: 8px;
+  font-family: monospace;
+  color: #e0e0e0;
+}
+.ps-pid { color: #00ff00; font-weight: bold; width: 60px; }
+.ps-cmd { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 10px; }
+.kill-btn {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid #ff0000;
+  color: #ff0000;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.kill-btn:active { background: #ff0000; color: black; }
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('ps', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  
+  // Skip the first line (command) and usually the second line (headers)
+  var outLines = lines.slice(1);
+  if (outLines.length > 0 && outLines[0].includes('PID')) {
+    outLines = outLines.slice(1);
+  }
+  
+  if (outLines.length === 0) {
+    results.innerText = "<div style='color:#00ff00; text-align:center;'>NO PROCESSES</div>";
+  } else {
+    outLines.forEach(l => {
+      l = l.trim();
+      if(!l) return;
+      // Simple parse assuming PID is first or second token
+      var parts = l.split(/\s+/);
+      var pid = parts[0];
+      // In many ps outputs, PID might be the first number
+      if (isNaN(parseInt(pid))) {
+        pid = parts[1]; // Try second column if first isn't number (like in ps aux)
+      }
+      var cmd = parts.slice(3).join(' ') || parts.join(' ');
+      
+      var row = B.new('div');
+      row.className = 'ps-row';
+      
+      var pidSpan = B.new('span');
+      pidSpan.className = 'ps-pid';
+      pidSpan.innerText = pid;
+      
+      var cmdSpan = B.new('span');
+      cmdSpan.className = 'ps-cmd';
+      cmdSpan.innerText = cmd;
+      
+      var btn = B.new('button');
+      btn.className = 'kill-btn';
+      btn.innerText = 'KILL';
+      btn.onclick = () => { kit.say('kill -9 ' + pid, 'prompt.try'); };
+      
+      row.appendChild(pidSpan);
+      row.appendChild(cmdSpan);
+      row.appendChild(btn);
+      results.appendChild(row);
+    });
+  }
+  
+  hear.off();
+});
+</script>

@@ -1,0 +1,92 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="npm-box">
+  <div class="header">
+    <div class="icon">📦</div>
+    <div class="title">NPM: <span id="subcmd" class="highlight"></span></div>
+  </div>
+  <pre id="results" class="results-list"></pre>
+  <div class="actions">
+    <button class="fat-btn" onclick="kit.say('npm install', 'prompt')">INSTALL</button>
+    <button class="fat-btn" onclick="kit.say('npm start', 'prompt')">START</button>
+    <button class="fat-btn" onclick="kit.say('npm test', 'prompt')">TEST</button>
+    <button class="fat-btn" onclick="kit.say('npm run build', 'prompt')">BUILD</button>
+  </div>
+</div>
+<style>
+.npm-box {
+  background: rgba(15, 10, 20, 0.95);
+  border: 2px solid #cb3837;
+  border-radius: 12px;
+  margin: 1em 0;
+  box-shadow: 0 0 20px rgba(203, 56, 55, 0.3);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(90deg, rgba(203, 56, 55, 0.3), transparent);
+  border-bottom: 2px solid #cb3837;
+  padding: 1em;
+  display: flex; align-items: center;
+}
+.icon { font-size: 2.5em; margin-right: 15px; filter: drop-shadow(0 0 10px #cb3837); animation: bounce 1s infinite alternate; }
+@keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-5px); } }
+.title { font-family: 'Courier New', monospace; font-size: 1.4em; font-weight: 900; color: white; }
+.highlight { color: #cb3837; text-shadow: 0 0 10px #cb3837; text-transform: uppercase; }
+.results-list {
+  padding: 1em;
+  margin: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 1.1em;
+  color: #e0e0e0;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+  scrollbar-color: #cb3837 transparent;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 1em;
+  gap: 10px;
+  background: rgba(0,0,0,0.5);
+  border-top: 1px dashed rgba(203, 56, 55, 0.5);
+}
+.fat-btn {
+  flex: 1 1 40%;
+  padding: 15px;
+  background: rgba(203, 56, 55, 0.2);
+  border: 2px solid #cb3837;
+  border-radius: 8px;
+  color: white;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: 0.2s;
+  text-shadow: 0 0 5px #cb3837;
+}
+.fat-btn:active {
+  background: #cb3837;
+  color: black;
+  transform: scale(0.95);
+  text-shadow: none;
+}
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 1;
+kit.ear('npm', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  var args = cmdLine.replace(/^npm\s+/, '').split(/\s+/);
+  subcmd.innerText = args[0] || "COMMAND";
+  
+  var outLines = lines.slice(1).join('\n');
+  results.textContent = outLines;
+  
+  hear.off();
+});
+</script>

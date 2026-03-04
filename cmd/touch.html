@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="touch-box">
+  <div class="icon">✨📝</div>
+  <div class="text">CREATED FILE <br><span id="fname" class="highlight"></span></div>
+</div>
+<style>
+.touch-box {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 1.5em; margin: 0.5em 0;
+  background: linear-gradient(135deg, rgba(255, 159, 243, 0.2), rgba(0,0,0,0.8));
+  border: 2px solid #ff9ff3;
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(255, 159, 243, 0.4);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.touch-box:active { transform: scale(0.95); background: #ff9ff3; }
+.touch-box:active * { color: black !important; text-shadow: none !important; }
+.icon { font-size: 3.5em; margin-right: 15px; filter: drop-shadow(0 0 10px #ff9ff3); animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.text { font-size: 1.4em; font-family: 'Courier New', monospace; font-weight: bold; color: #ff9ff3; text-shadow: 0 0 5px #ff9ff3; }
+.highlight { color: white; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 5px; font-size: 1.1em; text-shadow: none; display: inline-block; margin-top: 5px;}
+</style>
+<script src="../util.js"></script>
+<script>
+kit.ear('touch', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var cmdLine = lines[0].trim();
+  
+  var name = cmdLine.replace(/^touch\s+/, '').trim();
+  fname.innerText = name;
+  
+  container.onclick = () => { kit.say('ls .', 'prompt'); };
+  hear.off();
+});
+</script>

@@ -1,0 +1,55 @@
+<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<div id="container" class="pwd-box">
+  <div class="icon">📍</div>
+  <div id="content" class="path-display"></div>
+</div>
+<style>
+.pwd-box {
+  display: flex; align-items: center; justify-content: flex-start;
+  padding: 1.5em;
+  background: linear-gradient(90deg, rgba(0,255,200,0.15), rgba(0,0,0,0.8));
+  border-left: 6px solid #00ffc8;
+  border-radius: 12px;
+  margin: 0.5em 0;
+  overflow-x: auto;
+  box-shadow: 0 5px 15px rgba(0,255,200,0.1);
+}
+.icon { font-size: 2.5em; margin-right: 0.5em; filter: drop-shadow(0 0 10px #00ffc8); }
+.path-display { display: flex; flex-wrap: wrap; gap: 0.4em; font-family: 'Courier New', monospace; font-size: 1.3em; font-weight: 900; color: #00ffc8; }
+.crumb { background: rgba(0, 255, 200, 0.1); padding: 0.4em 0.8em; border-radius: 8px; border: 2px solid #00ffc8; cursor: pointer; transition: 0.2s; text-shadow: 0 0 8px rgba(0,255,200,0.8); }
+.crumb:active { background: #00ffc8; color: #000; transform: scale(0.9); text-shadow: none; box-shadow: 0 0 20px #00ffc8; }
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 1;
+kit.ear('pwd', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var path = lines[lines.length - 1].trim(); // Last line is the path output usually
+  
+  if (path) {
+    var parts = path.split('/').filter(Boolean);
+    content.innerHTML = '';
+    
+    if (path.startsWith('/')) {
+      var root = B.new('div'); root.className = 'crumb'; root.innerText = '/';
+      root.onclick = () => { kit.say('cd /', 'prompt.try'); };
+      content.appendChild(root);
+    }
+    
+    var currentPath = path.startsWith('/') ? '' : '.';
+    parts.forEach(p => {
+      currentPath += '/' + p;
+      let targetPath = currentPath; // Capture block scope
+      var crumb = B.new('div');
+      crumb.className = 'crumb';
+      crumb.innerText = p;
+      crumb.onclick = () => { kit.say('cd ' + targetPath, 'prompt.try'); };
+      content.appendChild(crumb);
+    });
+  } else {
+    content.innerText = "UNKNOWN PATH";
+  }
+  hear.off();
+});
+</script>
