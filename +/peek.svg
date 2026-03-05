@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Code on Phone social preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#030005"/>
+      <stop offset="55%" stop-color="#13051d"/>
+      <stop offset="100%" stop-color="#07000f"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.82" cy="0.18" r="0.6">
+      <stop offset="0%" stop-color="#d946ef" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#d946ef" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.2" cy="0.85" r="0.5">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="phoneGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b0b24"/>
+      <stop offset="100%" stop-color="#08020f"/>
+    </linearGradient>
+    <linearGradient id="strokeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d946ef"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glowA)"/>
+  <rect width="1200" height="630" fill="url(#glowB)"/>
+
+  <g opacity="0.2">
+    <path d="M0 500 L220 380 L440 470 L660 330 L880 430 L1200 290" stroke="#d946ef" stroke-width="2" fill="none"/>
+    <path d="M0 530 L260 430 L460 530 L700 390 L930 510 L1200 420" stroke="#a855f7" stroke-width="2" fill="none"/>
+  </g>
+
+  <g transform="translate(80,90)">
+    <text x="0" y="0" fill="#d1d5db" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="3"></text>
+    <text x="0" y="96" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800">Code on Phone</text>
+    <text x="0" y="168" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700">Squeeze More Work</text>
+    <text x="0" y="228" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="32">Out of Your Employees.</text>
+    <text x="0" y="282" fill="#cbd5e1" font-family="Arial, Helvetica, sans-serif" font-size="28">Train. Plane. 🚽. Code Anywhere. No Excuses.
+
+</text>
+
+    <rect x="0" y="328" width="305" height="62" rx="10" fill="#d946ef" filter="url(#softGlow)"/>
+    <text x="152" y="368" text-anchor="middle" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800">BECOME G.O.A.T</text>
+  </g>
+
+  <g transform="translate(820,75)">
+    <rect x="0" y="0" width="290" height="480" rx="45" fill="url(#phoneGrad)" stroke="url(#strokeGrad)" stroke-width="4"/>
+    <rect x="95" y="0" width="100" height="22" rx="0" fill="#07010d"/>
+    <rect x="28" y="55" width="234" height="338" rx="18" fill="#0b0512" stroke="#2a1235" stroke-width="1"/>
+    <text x="45" y="92" fill="#5b4a67" font-family="Courier New, monospace" font-size="12">// productivity mode</text>
+    <text x="45" y="122" fill="#d946ef" font-family="Courier New, monospace" font-size="14">fn</text>
+    <text x="66" y="122" fill="#ffffff" font-family="Courier New, monospace" font-size="14"> ship_code() {</text>
+    <text x="45" y="148" fill="#ffffff" font-family="Courier New, monospace" font-size="14">  location = </text>
+    <text x="136" y="148" fill="#a855f7" font-family="Courier New, monospace" font-size="14">"TRAIN"</text>
+    <text x="45" y="174" fill="#ffffff" font-family="Courier New, monospace" font-size="14">  commit("done")</text>
+    <text x="45" y="200" fill="#ffffff" font-family="Courier New, monospace" font-size="14">}</text>
+    <rect x="28" y="412" width="234" height="45" rx="12" fill="#13081a" stroke="#5f2575" stroke-width="1"/>
+    <text x="145" y="441" text-anchor="middle" fill="#d946ef" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700">COMMIT</text>
+  </g>
+</svg>
