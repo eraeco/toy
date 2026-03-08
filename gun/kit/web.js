@@ -35,7 +35,7 @@ W[ON]('message',function(eve,data,i,tmp){
     kit.say(data.data||data.detail,data.type,0,1);
     return;
   }
-  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(eve.target === i){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } /*if(eve.target === i){ return }*/ i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
   kit.say(data.data||data.detail,data.type,i);
 });
 kit.views = new Map;

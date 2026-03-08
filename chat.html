@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
 <div id="shell">
 <div style="background: red; height: 2700px; display:none;" >asdf</div>
 </div>
@@ -336,7 +336,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       kit.ear('load', function(eve){
         if(eve.detail === undefined) return; // Ignore native iframe load (e.g. 404)
         if(eve.target !== i) return;
-        kit.say(s,cmd, i.contentWindow);
+        kit.say(s,cmd, i);
         v.upgraded = 1;
         v.upgrading = 0;
         v.classList.remove('ready-upgrade');

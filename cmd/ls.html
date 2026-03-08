@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/gun/kit/web.css"><script src="/gun/kit/web.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 <div id="name">ls</div>
 <div id="list" class="ls">
 
@@ -75,8 +75,10 @@ display: block; width: 100%;
 </style>
 <script src="../util.js"></script>
 <script>
-
+console.log("LS!!!!");
+window.onmessage = function(eve){ console.log('FLJDLKFJFLKJ', eve.detail || eve.data); }
 kit.ear('ls',function hear(eve){
+  console.log('LS IS HEARING:', eve.detail || eve.data);
   CMD.ls(eve.detail || eve.data, list);
   hear.off();
 });
