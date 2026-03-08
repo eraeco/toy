@@ -321,7 +321,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     (v = B.new('div')).className = 'reply-card ready-upgrade';
     v.raw = s;
     v.append(p);
-    v.ear('click', function(eve){
+    setTimeout(function(eve){
       if(v.upgraded || v.upgrading){ return }
       cmd = t.cut(['\r\n','\n','\r'],ESC)[0].trim();
       cmd = cmd.replace(/^.*(?:\$|#|>|PS>)\s*/, '');
@@ -339,13 +339,14 @@ CMD.bash = function(S, cmdl, cmd, tmp){
         v.upgraded = 1;
         v.upgrading = 0;
         v.classList.remove('ready-upgrade');
+        v.all('pre')[0].remove();
       }, i);
       setTimeout(function(){
         if(v.upgraded || !v.upgrading){ return }
         v.upgrading = 0;
         i.remove();
       },900);
-    });
+    },99);
     shell.append(v);
   });
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
