@@ -59,8 +59,7 @@ kit.ear('cat', function hear(eve) {
   
   var text = lines.slice(1).join('\n');
   // Trim trailing prompts if they leaked
-  text = text.replace(/[
-]+.*(?:\$|#|>)\s*$/, '');
+  text = text.replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
   
   content.textContent = text;
   hear.off();

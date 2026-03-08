@@ -35,8 +35,8 @@ W[ON]('message',function(eve,data,i,tmp){
     kit.say(data.data||data.detail,data.type,0,1);
     return;
   }
-  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } /*if(eve.target === i){ return }*/ i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
-  kit.say(data.data||data.detail,data.type,i);
+  if('ear'==data.type){ kit.ear(data.detail||data.data,function hear(eve){ if(!(i||'').contentWindow){hear.off(); return } if(kit._echo && kit._echo.i === i && kit._echo.t === eve.type){ return } i.contentWindow.postMessage({data:eve.detail||eve.data,type:eve.type,wrap:-1}, DEV?'*':location.origin) }); return; }
+  kit._echo = {i:i,t:data.type}; kit.say(data.data||data.detail,data.type,i); kit._echo = null;
 });
 kit.views = new Map;
 (kit.size = function(b,d,h,w,last){
