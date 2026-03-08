@@ -7,7 +7,7 @@ var W = window, D = document, SW = screen.width, SH = screen.height, ON = 'addEv
 }());
 var tmp = D[HI]('meta'); tmp.name = 'viewport'; tmp.content = 'width=device-width, initial-scale=1, interactive-widget=resizes-content'; D.head.appendChild(tmp);
 //(tmp=D[HI]('link')).rel="stylesheet"; tmp.href=((D.currentScript||'').src||'').replace('.js','.css'); D.head.appendChild(tmp); // auto-add CSS?
-tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow-y'] = 'auto'; tmp['overscroll-behavior-y'] = 'contain'; } 
+tmp = D.head.parentNode.style; if(W.parent === W) { tmp['overscroll-behavior-y'] = 'contain'; tmp['background-color'] = 'var(--fill)'; } else { tmp['overflow-y'] = 'auto'; tmp['overscroll-behavior-y'] = 'auto'; } 
 function LOAD(src, h, s){ (s = D[HI]('script')).onload = h; s.src = src; D.head.appendChild(s) };
 function MAP(scroll, screen){ return (scroll / screen)>>0 }; // scroll, screen
 kit = function(){};
@@ -138,14 +138,14 @@ kit.frame.setSubScroll = function(i,d,b){
     i._kitSubLocked = 1;
     b = d.body || d.documentElement;
     d.documentElement.style.overflow = 'hidden';
-    d.documentElement.style.overscrollBehavior = 'none';
+    d.documentElement.style.overscrollBehavior = '';
     if(b){
       b.style.overflow = 'hidden';
-      b.style.overscrollBehavior = 'none';
-      b.style.touchAction = 'none';
+      b.style.overscrollBehavior = '';
+      b.style.touchAction = '';
     }
-    i.style.overscrollBehavior = 'contain';
-    i.style.touchAction = 'none';
+    i.style.overscrollBehavior = '';
+    i.style.touchAction = '';
   }catch(e){}
 };
 kit.frame.refresh = function(){
@@ -156,96 +156,12 @@ kit.frame.refresh = function(){
 };
 kit.frame.lockScroll = function(i,d,b,w,y){
   if(!i){ return }
-  var py, pid;
-  function scrollHost(dy){
-    if(!dy){ return }
-    try{ W.scrollBy(0, dy) }catch(e){}
-    try{ if(W.parent && W.parent !== W){ W.parent.scrollBy(0, dy) } }catch(e){}
-  }
   function apply(){
     try{
       d = i.contentDocument; w = i.contentWindow;
       if(!d || !w){ return }
       if(kit.frame.isMain(i)){ kit.frame.setMainScroll(i) }
       else { kit.frame.setSubScroll(i) }
-      if(w._kitLockScroll){ return }
-      w._kitLockScroll = 1;
-      d.addEventListener('wheel', function(e){
-        if(!i._kitSubLocked){ return }
-        scrollHost(e.deltaY || 0);
-        e.preventDefault();
-      }, {passive:false, capture:true});
-      w.addEventListener('wheel', function(e){
-        if(!i._kitSubLocked){ return }
-        scrollHost(e.deltaY || 0);
-        e.preventDefault();
-      }, {passive:false});
-      d.addEventListener('touchstart', function(e){
-        if(!i._kitSubLocked){ return }
-        if(e.touches && e.touches[0]){ y = e.touches[0].clientY; }
-      }, {passive:true, capture:true});
-      d.addEventListener('touchmove', function(e, ny, dy){
-        if(!i._kitSubLocked){ return }
-        if(!(e.touches && e.touches[0])){ return }
-        ny = e.touches[0].clientY; dy = y - ny; y = ny;
-        scrollHost(dy);
-        e.preventDefault();
-      }, {passive:false, capture:true});
-      w.addEventListener('touchstart', function(e){
-        if(!i._kitSubLocked){ return }
-        if(e.touches && e.touches[0]){ y = e.touches[0].clientY; }
-      }, {passive:true});
-      w.addEventListener('touchmove', function(e, ny, dy){
-        if(!i._kitSubLocked){ return }
-        if(!(e.touches && e.touches[0])){ return }
-        ny = e.touches[0].clientY; dy = y - ny; y = ny;
-        scrollHost(dy);
-        e.preventDefault();
-      }, {passive:false});
-      d.addEventListener('pointerdown', function(e){
-        if(!i._kitSubLocked){ return }
-        if(e.pointerType !== 'touch'){ return }
-        pid = e.pointerId; py = e.clientY;
-      }, {passive:true, capture:true});
-      d.addEventListener('pointermove', function(e, dy){
-        if(!i._kitSubLocked){ return }
-        if(e.pointerType !== 'touch'){ return }
-        if(pid !== undefined && e.pointerId !== pid){ return }
-        if(py === undefined){ py = e.clientY; return }
-        dy = py - e.clientY; py = e.clientY;
-        scrollHost(dy);
-        e.preventDefault();
-      }, {passive:false, capture:true});
-      d.addEventListener('pointerup', function(e){
-        if(e.pointerType !== 'touch'){ return }
-        if(pid === e.pointerId){ pid = undefined; py = undefined; }
-      }, {passive:true, capture:true});
-      d.addEventListener('pointercancel', function(e){
-        if(e.pointerType !== 'touch'){ return }
-        if(pid === e.pointerId){ pid = undefined; py = undefined; }
-      }, {passive:true, capture:true});
-      w.addEventListener('pointerdown', function(e){
-        if(!i._kitSubLocked){ return }
-        if(e.pointerType !== 'touch'){ return }
-        pid = e.pointerId; py = e.clientY;
-      }, {passive:true});
-      w.addEventListener('pointermove', function(e, dy){
-        if(!i._kitSubLocked){ return }
-        if(e.pointerType !== 'touch'){ return }
-        if(pid !== undefined && e.pointerId !== pid){ return }
-        if(py === undefined){ py = e.clientY; return }
-        dy = py - e.clientY; py = e.clientY;
-        scrollHost(dy);
-        e.preventDefault();
-      }, {passive:false});
-      w.addEventListener('pointerup', function(e){
-        if(e.pointerType !== 'touch'){ return }
-        if(pid === e.pointerId){ pid = undefined; py = undefined; }
-      }, {passive:true});
-      w.addEventListener('pointercancel', function(e){
-        if(e.pointerType !== 'touch'){ return }
-        if(pid === e.pointerId){ pid = undefined; py = undefined; }
-      }, {passive:true});
     }catch(e){}
   }
   apply();
