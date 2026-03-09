@@ -1,0 +1,79 @@
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+<div id="container" class="id-box">
+  <div class="scanline"></div>
+  <div class="badge">
+    <div class="icon">&#x1F9D1;&#x200D;&#x1F4BB;</div>
+    <div class="info">
+      <div class="label">LOGGED IN AS</div>
+      <div id="username" class="name"></div>
+    </div>
+  </div>
+</div>
+<style>
+.id-box {
+  position: relative;
+  padding: 1.5em;
+  margin: 0.5em 0;
+  background: linear-gradient(135deg, rgba(0, 255, 65, 0.1), rgba(0, 0, 0, 0.9));
+  border: 2px solid #00ff41;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.2), inset 0 0 30px rgba(0, 255, 65, 0.05);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.id-box:active { transform: scale(0.95); background: #00ff41; }
+.id-box:active .name, .id-box:active .label { color: #000; text-shadow: none; }
+.scanline {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: #00ff41;
+  box-shadow: 0 0 10px #00ff41;
+  animation: scan 2s linear infinite;
+}
+@keyframes scan {
+  0% { top: 0; opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { top: 100%; opacity: 0; }
+}
+.badge {
+  display: flex; align-items: center; gap: 1em;
+}
+.icon {
+  font-size: 3em;
+  filter: drop-shadow(0 0 10px #00ff41);
+}
+.label {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8em;
+  font-weight: 900;
+  color: #00ff41;
+  opacity: 0.7;
+  letter-spacing: 3px;
+  text-shadow: 0 0 5px #00ff41;
+}
+.name {
+  font-family: 'Courier New', monospace;
+  font-size: 2em;
+  font-weight: 900;
+  color: #00ff41;
+  text-shadow: 0 0 15px #00ff41, 0 0 30px rgba(0, 255, 65, 0.3);
+  letter-spacing: 2px;
+  animation: flicker 3s infinite;
+}
+@keyframes flicker {
+  0%, 97%, 100% { opacity: 1; }
+  98% { opacity: 0.8; }
+}
+</style>
+<script src="../util.js"></script>
+<script>
+console.off = 1;
+kit.ear('whoami', function hear(eve) {
+  var s = eve.detail || eve.data || "";
+  var lines = s.flat().trim().split('\n');
+  var user = lines.slice(1).join('\n').trim() || lines[0].replace(/^whoami\s*/,'').trim() || "UNKNOWN";
+  username.innerText = user;
+  container.onclick = function(){ kit.say('id', 'prompt.try') };
+  hear.off();
+});
+</script>
