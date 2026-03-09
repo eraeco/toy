@@ -1,5 +1,5 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="name">ls</div>
+
 <div id="list" class="ls">
 
 </div>
@@ -92,7 +92,7 @@ CMD.ls = function(s,v,f,cmd){
   v.tag('ls',+1).innerHTML = '';
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
   
-  B.all('#name')[0].innerText = cmd;
+
 
   f = (s.indexOf('\t')+1)? '\t' : /\s+/;
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');

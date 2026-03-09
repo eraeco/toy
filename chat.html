@@ -1,6 +1,6 @@
 <link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
 <div id="shell">
-<div style="background: red; height: 2700px; display:none;" >asdf</div>
+
 </div>
 
 
@@ -167,7 +167,6 @@ var belt = B.all('.kit')[0];
 
 
 kit.ear('chat',(eve)=>{
-  //console.log(">", eve.detail || eve.data);
   stream(eve.detail || eve.data);
 });
 kit.ear('prompt',(eve)=>{
@@ -182,26 +181,31 @@ kit.ear('prompt',(eve)=>{
 kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
 });
+
+var history = [], hi=1;
 prompt.onkeydown = function(eve){
-  return;
-  if(eve.key === 'ArrowUp') {
-    if(histIndex > 0) { histIndex--; prompt.value = history[histIndex]; }
-    eve.preventDefault();
-  } else if (eve.key === 'ArrowDown') {
-    if(histIndex < history.length - 1) { histIndex++; prompt.value = history[histIndex]; }
-    else { histIndex = history.length; prompt.value = ''; }
-    eve.preventDefault();
-  } else if (eve.key === 'Enter' && !eve.shiftKey) {
+  if (eve.key === 'Enter' && !eve.shiftKey) {
     eve.preventDefault();
     kit.say('', 'prompt');
+    return;
+  }
+  if(eve.key === 'ArrowUp') {
+    if(hi > 0) { hi--; prompt.value = history[hi]; }
+    eve.preventDefault();
+  } else if (eve.key === 'ArrowDown') {
+    if(hi < history.length - 1) { hi++; prompt.value = history[hi]; }
+    else { hi = history.length; prompt.value = ''; }
+    eve.preventDefault();
   }
 };
             
 kit.ear('belt', function(eve, data, b){
   data = eve.detail || eve.data;
+  var name = data.name||data[0];
+  if(B.all('#'+name)[0]){return}
   b = B.new('button');
 
-  b.textContent = data.name||data[0];
+  b.id = b.textContent = name;
 
   b.onclick = function(){
     kit.say(data.prompt||[1], 'prompt');
@@ -337,13 +341,11 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
 }
 }());
-kit.ear('clear',eve=>{shell.innerHTML = ""; console.log("clear call"); });
+kit.ear('clear',eve=>{return;shell.innerHTML = ""; });
 
-kit.say('clear', 'prompt');
-//kit.say('whoami', 'prompt');
-//kit.say('ls .', 'prompt');
-console.log(1) ;
-
+//kit.say('clear', 'prompt');
+kit.say('whoami', 'prompt');
+kit.say('ls .', 'prompt');
 var f = "\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$";
 var p = ["\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m clear\r\n\u001b[?2004l\r","\u001b[H\u001b[2J","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \r\n\u001b[?2004l\r\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m ls .\r\n\u001b[?2004l\r","\u001b[0m\u001b[01;34m2022\u001b[0m         debug        index.html     \u001b[01;34mrandom\u001b[0m         tantra-training.html\r\nREADME.md    gemini.json  install.sh     settings.json  \u001b[01;34mtmp\u001b[0m\r\ncollab.html  git.html     prompt         ssh.js\r\n\u001b[01;34mcop\u001b[0m          git.js       property.html  \u001b[01;34msurviving\u001b[0m\r\n","\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m "];
 

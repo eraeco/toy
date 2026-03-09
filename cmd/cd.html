@@ -1,24 +1,16 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 <div id="container" class="cmd-box">
-  <div class="icon">🗂️</div>
+
   <div id="content" class="text"></div>
 </div>
 <style>
 .cmd-box {
-  display: flex; align-items: center; justify-content: center;
-  padding: 1.5em; margin: 0.5em 0;
-  background: linear-gradient(135deg, rgba(191, 0, 255, 0.2), rgba(0, 0, 0, 0.8));
-  border: 2px solid var(--pop);
-  border-radius: 16px;
-  box-shadow: 0 0 15px var(--pop), inset 0 0 10px rgba(191, 0, 255, 0.5);
-  backdrop-filter: blur(8px);
-  cursor: pointer;
-  transition: all 0.2s ease-out;
+  
 }
-.cmd-box:active { transform: scale(0.95); background: var(--pop); }
-.cmd-box:active .text { color: var(--mood); text-shadow: none; }
-.icon { font-size: 3.5em; margin-right: 0.5em; filter: drop-shadow(0 0 10px var(--pop)); }
-.text { font-size: 1.5em; font-weight: 900; font-family: 'Courier New', Courier, monospace; word-break: break-all; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 8px var(--pop); color: white; }
+.cmd-box:active {  }
+.cmd-box:active .text { }
+.icon {  }
+.text { }
 .error { border-color: #ff0055; box-shadow: 0 0 15px #ff0055, inset 0 0 10px rgba(255, 0, 85, 0.5); }
 .error .icon { filter: drop-shadow(0 0 10px #ff0055); }
 .error .text { color: #ff0055; text-shadow: 0 0 8px #ff0055; }
@@ -44,11 +36,8 @@ kit.ear('cd', function hear(eve) {
   }
   content.innerText = text;
   
-  // Click to clear and list new directory
-  container.onclick = () => {
-    kit.say('', 'prompt');
-    kit.say('ls .', 'prompt');
-  };
+
+
   hear.off();
 });
 </script>
