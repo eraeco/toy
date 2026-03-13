@@ -60,6 +60,11 @@ textarea {
   background: transparent;
   backdrop-filter: blur(var(--blur));
 }
+#shell > div > pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
 #shell > div > p {
   display: block;
   fl-oat: left;
@@ -287,7 +292,7 @@ var stream = function(t){
 }, CMD = {};
 
 ;(function(){
-var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
 stream.eat = function(s){
   var f = s.cut(F,ESC);
   if(!f[1]){ setTimeout(t=>{if(F.forEach){shell.append("cannot find prompt. custom shell being used?")}}); return }
@@ -302,7 +307,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   var usedF = F;
 
   if(arr[arr.length-1].flat().trim()){ 
-    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
     if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
       var lines = S.split('\n'), lastL = lines[lines.length-1];
       var newF = lastL.cut(P, ESC);
@@ -339,7 +344,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       var promptToUse = firstChunk ? oldF : F;
       firstChunk = false;
       var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
-      var match = promptText.match(/^(.*?)([\$#>]\s*)$/);
+      var match = promptText.match(/^(.*?)([\$#>\%]\s*|\~%\s*)$/s);
       if (match) {
          var pathPart = match[1].trim();
          var symPart = match[2].trim();

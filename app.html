@@ -61,9 +61,11 @@ function bootVM() {
   var s = document.createElement('script');
   s.src = "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/libv86.js";
   s.onload = function() {
+    kit.say("Initializing VM...\n", 'chat');
+    
     var emulator = window.emulator = new V86({
         wasm_path: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/v86.wasm",
-        memory_size: 32 * 1024 * 1024,
+        memory_size: 64 * 1024 * 1024,
         vga_memory_size: 2 * 1024 * 1024,
         bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/seabios.bin" },
         vga_bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/vgabios.bin" },
@@ -74,21 +76,69 @@ function bootVM() {
         disable_mouse: true,
     });
     
+    var emulatorReady = false;
+    var commandQueue = [];
+    
     cop.ws = {
         send: function(cmd) {
-            emulator.serial0_send(cmd);
+            console.log("Sending to VM:", JSON.stringify(cmd));
+            // Ensure commands end with a newline so the shell processes them
+            if (cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) {
+               cmd += '\n';
+            }
+            if (!emulatorReady) {
+               commandQueue.push(cmd);
+            } else {
+               emulator.serial0_send(cmd);
+            }
         }
     };
     
+    while(preBootQueue.length > 0) {
+        cop.ws.send(preBootQueue.shift());
+    }
+    
     var buf = "";
-    emulator.add_listener("serial0-output-char", function(char) {
+    emulator.add_listener("serial0-output-byte", function(byte) {
+        var char = String.fromCharCode(byte);
         buf += char;
         if (window.serialTimeout) clearTimeout(window.serialTimeout);
         window.serialTimeout = setTimeout(function() {
-          console.log(buf);
+            console.log("VM output:", JSON.stringify(buf));
             kit.say(buf, 'chat');
             buf = "";
         }, 50); // slight debounce buffer
+    });
+
+    var progressEls = {};
+    emulator.add_listener("download-progress", function(e) {
+        // Only log once per file to avoid spamming the chat
+        if (!progressEls[e.file_name] && e.file_name) {
+            progressEls[e.file_name] = true;
+            kit.say("Downloading " + e.file_name + "...\n", 'chat');
+        }
+    });
+
+    emulator.add_listener("download-error", function(e) {
+        kit.say("Download error: " + (e.message || JSON.stringify(e) || e) + "\n", 'chat');
+    });
+
+    emulator.add_listener("emulator-ready", function() {
+        kit.say("Emulator ready! Booting OS...\n", 'chat');
+    });
+
+    emulator.add_listener("emulator-started", function() {
+        kit.say("Emulator started.\n", 'chat');
+        // Wait a bit for the OS to actually boot to the login prompt
+        setTimeout(function() {
+           emulator.serial0_send("root\n"); // Auto-login as root for buildroot
+           setTimeout(function() {
+               emulatorReady = true;
+               while(commandQueue.length > 0) {
+                   emulator.serial0_send(commandQueue.shift());
+               }
+           }, 1000);
+        }, 5000);
     });
 
     location.path = 'chat.html';
@@ -98,10 +148,14 @@ function bootVM() {
 
 (pass.value = localStorage.pass||'') && cop.sign();
 
+var preBootQueue = [];
 kit.ear('host',(eve)=>{
-  if(!cop.ws){ return } // maybe attempt reconnect?
   var cmd = eve.detail||eve.data;
   if('string' != typeof cmd){ return }
+  if(!cop.ws){ 
+      preBootQueue.push(cmd);
+      return; 
+  }
   cop.ws.send(cmd);
 });
 
