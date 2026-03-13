@@ -184,7 +184,8 @@ kit.ear('style',function(eve,i){
   if(!eve.target || !eve.target.style){ return }
   //console.log(location.pathname.split('/').slice(-1)[0], "resize:", eve.target, eve.detail);
   var h = (eve.detail||'').height; if(h) eve.target.style.height = isNaN(h) ? h : h+'px';
-  var w = (eve.detail||'').width; if(w) eve.target.style.width = isNaN(w) ? w : w+'px';
+  // Allow width to remain responsive (e.g. 100%) rather than locking it to fixed pixels
+  // var w = (eve.detail||'').width; if(w) eve.target.style.width = isNaN(w) ? w : w+'px';
 },document);
 kit.http = {createServer: function(h){
   h.listen = function(port,ip,cb){cb&&cb()};

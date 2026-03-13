@@ -11,6 +11,8 @@
     
   </div>
 
+  <button id="scroll-down-btn" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:6em; right:1em; z-index:101; background:var(--pop, lime); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:1.5em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.5;">↓</button>
+
   <form onsubmit="kit.say('','prompt'); return false;">
     <div id="help"></div>
     
@@ -57,6 +59,11 @@ textarea {
   border-radius: 1em;
   background: transparent;
   backdrop-filter: blur(var(--blur));
+}
+#shell > div > pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
 }
 #shell > div > p {
   display: block;
@@ -232,6 +239,7 @@ prompt.oninput = function(eve){
     help.textContent = v.textContent || '';
     prompt.try = (v.all('code')[0] || v.all('b')[0] || {}).textContent||'';
     if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
+    else { var btn = B.all('#scroll-down-btn')[0]; if(btn) btn.style.display = 'flex'; }
   },333);
 }
 const autoGrow = (textarea) => {
@@ -248,6 +256,15 @@ prompt.onfocus = function(eve){
 };
 
 autoGrow(prompt);
+
+window.addEventListener('scroll', function() {
+  var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
+  var btn = B.all('#scroll-down-btn')[0];
+  if(atBottom && btn) {
+    btn.style.display = 'none';
+  }
+}, true);
+
 B.all('#help')[0].ear('pointerdown',function(eve){
   if(!prompt.try){ return }
   eve.preventDefault();
@@ -270,11 +287,12 @@ var stream = function(t){
   stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((stream.last||'')+t) : ((stream.last||'')+t);
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
+  else { var btn = B.all('#scroll-down-btn')[0]; if(btn) btn.style.display = 'flex'; }
   (stream.eat || CMD.bash)(stream.last);
 }, CMD = {};
 
 ;(function(){
-var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+var F = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
 stream.eat = function(s){
   var f = s.cut(F,ESC);
   if(!f[1]){ setTimeout(t=>{if(F.forEach){shell.append("cannot find prompt. custom shell being used?")}}); return }
@@ -289,7 +307,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
   var usedF = F;
 
   if(arr[arr.length-1].flat().trim()){ 
-    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>'];
+    var P = ['$','#','>','C:\\>','PS>','>>>','...','(venv)','>>','%','~%'];
     if(P.some(c => S.flat().replace(/\s+$/, '').endsWith(c))){
       var lines = S.split('\n'), lastL = lines[lines.length-1];
       var newF = lastL.cut(P, ESC);
@@ -326,7 +344,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
       var promptToUse = firstChunk ? oldF : F;
       firstChunk = false;
       var promptText = (Array.isArray(promptToUse) ? '$' : (promptToUse.flat ? promptToUse.flat() : promptToUse)).trim();
-      var match = promptText.match(/^(.*?)([\$#>]\s*)$/);
+      var match = promptText.match(/^(.*?)([\$#>\%]\s*|\~%\s*)$/s);
       if (match) {
          var pathPart = match[1].trim();
          var symPart = match[2].trim();
@@ -372,6 +390,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     shell.append(v);
   });
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
+  else { var btn = B.all('#scroll-down-btn')[0]; if(btn) btn.style.display = 'flex'; }
 }
 }());
 kit.ear('clear',eve=>{return;shell.innerHTML = ""; });

@@ -4,6 +4,14 @@
   <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
   <button type="submit"></button>
 </form>
+<dialog id="vmDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000;">
+  <p style="margin-top: 0; font-family: monospace;">Host failed to connect.</p>
+  <p style="font-family: monospace;">Do you want to boot a Linux VM in the browser?</p>
+  <div style="display: flex; justify-content: flex-end; gap: 1em; margin-top: 2em; font-family: monospace;">
+    <button onclick="vmDialog.close('no')" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer;">No</button>
+    <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
+  </div>
+</dialog>
 <style>
 :root { --fill: var(--mood); }
 body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
@@ -16,8 +24,10 @@ input::placeholder { opacity: 1; }
 host.focus();
 console.off=1;
 cop.sign = async ()=>{ if(cop.ws){ return }
+  var opened = false;
   cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
   cop.ws.onopen = ()=>{
+    opened = true;
     console.log('ws open');
     cop.ws.send(localStorage.pass=pass.value);
 
@@ -36,14 +46,116 @@ cop.sign = async ()=>{ if(cop.ws){ return }
   cop.ws.onclose = (eve) => { cop.ws=0;
     //chat.style.display = 'grid';
     console.log('ws close:', eve.code, 'Reason:', eve.reason);
+    if(!opened) {
+      vmDialog.showModal();
+      vmDialog.onclose = function() {
+        if(vmDialog.returnValue === 'yes') {
+          bootVM();
+        }
+      };
+    }
   };
 }
+
+function bootVM() {
+  var s = document.createElement('script');
+  s.src = "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/libv86.js";
+  s.onload = function() {
+    kit.say("Initializing VM...\n", 'chat');
+    
+    var emulator = window.emulator = new V86({
+        wasm_path: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/build/v86.wasm",
+        memory_size: 64 * 1024 * 1024,
+        vga_memory_size: 2 * 1024 * 1024,
+        bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/seabios.bin" },
+        vga_bios: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/bios/vgabios.bin" },
+        bzimage: { url: "https://cdn.jsdelivr.net/gh/aethiop/v86@master/images/buildroot-bzimage68.bin" },
+        cmdline: "tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
+        autostart: true,
+        disable_keyboard: true,
+        disable_mouse: true,
+    });
+    
+    var emulatorReady = false;
+    var commandQueue = [];
+    
+    cop.ws = {
+        send: function(cmd) {
+            console.log("Sending to VM:", JSON.stringify(cmd));
+            // Ensure commands end with a newline so the shell processes them
+            if (cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) {
+               cmd += '\n';
+            }
+            if (!emulatorReady) {
+               commandQueue.push(cmd);
+            } else {
+               emulator.serial0_send(cmd);
+            }
+        }
+    };
+    
+    while(preBootQueue.length > 0) {
+        cop.ws.send(preBootQueue.shift());
+    }
+    
+    var buf = "";
+    emulator.add_listener("serial0-output-byte", function(byte) {
+        var char = String.fromCharCode(byte);
+        buf += char;
+        if (window.serialTimeout) clearTimeout(window.serialTimeout);
+        window.serialTimeout = setTimeout(function() {
+            console.log("VM output:", JSON.stringify(buf));
+            kit.say(buf, 'chat');
+            buf = "";
+        }, 50); // slight debounce buffer
+    });
+
+    var progressEls = {};
+    emulator.add_listener("download-progress", function(e) {
+        // Only log once per file to avoid spamming the chat
+        if (!progressEls[e.file_name] && e.file_name) {
+            progressEls[e.file_name] = true;
+            kit.say("Downloading " + e.file_name + "...\n", 'chat');
+        }
+    });
+
+    emulator.add_listener("download-error", function(e) {
+        kit.say("Download error: " + (e.message || JSON.stringify(e) || e) + "\n", 'chat');
+    });
+
+    emulator.add_listener("emulator-ready", function() {
+        kit.say("Emulator ready! Booting OS...\n", 'chat');
+    });
+
+    emulator.add_listener("emulator-started", function() {
+        kit.say("Emulator started.\n", 'chat');
+        // Wait a bit for the OS to actually boot to the login prompt
+        setTimeout(function() {
+           emulator.serial0_send("root\n"); // Auto-login as root for buildroot
+           setTimeout(function() {
+               emulatorReady = true;
+               while(commandQueue.length > 0) {
+                   emulator.serial0_send(commandQueue.shift());
+               }
+           }, 1000);
+        }, 5000);
+    });
+
+    location.path = 'chat.html';
+  };
+  document.head.appendChild(s);
+}
+
 (pass.value = localStorage.pass||'') && cop.sign();
 
+var preBootQueue = [];
 kit.ear('host',(eve)=>{
-  if(!cop.ws){ return } // maybe attempt reconnect?
   var cmd = eve.detail||eve.data;
   if('string' != typeof cmd){ return }
+  if(!cop.ws){ 
+      preBootQueue.push(cmd);
+      return; 
+  }
   cop.ws.send(cmd);
 });
 
