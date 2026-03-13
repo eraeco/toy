@@ -3,6 +3,18 @@
 <div id="list" class="ls">
 
 </div>
+
+<dialog id="actionDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000; font-family: monospace;">
+  <p style="margin-top: 0; font-weight: bold;">Action on <span id="dialogTargetFile"></span>:</p>
+  <div style="display: flex; flex-direction: column; gap: 0.5em; margin-top: 1em;">
+    <button id="btnCat" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left;">📄 cat</button>
+    <button id="btnCp" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left;">📋 cp</button>
+    <button id="btnMv" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left;">🚚 mv</button>
+    <button id="btnRm" style="background: transparent; color: inherit; border: 1px solid red; padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left; color: red;">🗑️ rm</button>
+    <button onclick="actionDialog.close()" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em; border-radius: 0.5em; cursor: pointer; font-weight: bold; margin-top: 1em; text-align: center;">Cancel</button>
+  </div>
+</dialog>
+
 <style>
 .ls { 
   width: 100%; 
@@ -85,6 +97,7 @@ kit.ear('ls',function hear(eve){
   
 kit.say(['ls','ls .'], 'belt');
 kit.say(['git','git status'], 'belt');
+kit.say(['Gemini','gemini --help'], 'belt');
 
   
 CMD = {};
@@ -121,24 +134,63 @@ CMD.ls = function(s,v,f,cmd){
   });
   
   CMD.ls.on = CMD.ls.on || (function(){ 
+    var longPressTimer;
+
     B.ear('pointerdown',(eve, el)=>{ el = eve.target;
       var a = el.closest('a');
       if(!a) return;
       if(!a.closest('.ls')) return;
       
       var val = a.dataset.val;
+      if(val === '..') return; // Don't long press '..'
+
+      longPressTimer = setTimeout(function() {
+          eve.preventDefault();
+          eve.stopPropagation();
+          showActionDialog(val);
+      }, 500); // 500ms long press
+
       if(val.includes('.') && val !== '..') {
          kit.say('cat ' + val, 'prompt.try');
       } else {
          kit.say('cd ' + val, 'prompt.try');
       }
     });
+
+    B.ear('pointerup',(eve, el)=>{
+      clearTimeout(longPressTimer);
+    });
+
+    B.ear('pointermove',(eve, el)=>{
+      clearTimeout(longPressTimer);
+    });
+    
+    B.ear('contextmenu', (eve, el) => {
+      el = eve.target;
+      var a = el.closest('a');
+      if(!a) return;
+      if(!a.closest('.ls')) return;
+      
+      var val = a.dataset.val;
+      if(val === '..') return;
+
+      eve.preventDefault();
+      clearTimeout(longPressTimer);
+      showActionDialog(val);
+    });
+
     B.ear('click',(eve, el)=>{ el = eve.target;
       var a = el.closest('a');
       if(!a) return;
       if(!a.closest('.ls')) return;
       
       var val = a.dataset.val;
+      // If dialog is open, ignore normal clicks
+      if(actionDialog.open) {
+          eve.preventDefault();
+          return;
+      }
+      
       if(val.includes('.') && val !== '..') {
         kit.say('', 'prompt');
         kit.say('cat ' + val, 'prompt');
@@ -147,6 +199,29 @@ CMD.ls = function(s,v,f,cmd){
         kit.say('ls .', 'prompt');
       }
     })
+
+    function showActionDialog(val) {
+        dialogTargetFile.innerText = val;
+        
+        btnCat.onclick = function() {
+            kit.say('cat ' + val, 'prompt');
+            actionDialog.close();
+        };
+        btnCp.onclick = function() {
+            kit.say('cp ' + val + ' ', 'prompt.try');
+            actionDialog.close();
+        };
+        btnMv.onclick = function() {
+            kit.say('mv ' + val + ' ', 'prompt.try');
+            actionDialog.close();
+        };
+        btnRm.onclick = function() {
+            kit.say('rm ' + val, 'prompt.try');
+            actionDialog.close();
+        };
+
+        actionDialog.showModal();
+    }
   }())||1;
 }
 </script>
