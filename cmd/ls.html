@@ -4,14 +4,15 @@
 
 </div>
 
-<dialog id="actionDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000; font-family: monospace;">
+<dialog id="actionDialog" class="fog sap lip ls-action-dialog">
   <p style="margin-top: 0; font-weight: bold;">Action on <span id="dialogTargetFile"></span>:</p>
-  <div style="display: flex; flex-direction: column; gap: 0.5em; margin-top: 1em;">
+  <div class="ls-action-grid">
     <button id="btnCat" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left;">📄 cat</button>
     <button id="btnCp" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left;">📋 cp</button>
     <button id="btnMv" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left;">🚚 mv</button>
     <button id="btnRm" style="background: transparent; color: inherit; border: 1px solid red; padding: 0.5em; border-radius: 0.5em; cursor: pointer; text-align: left; color: red;">🗑️ rm</button>
-    <button onclick="actionDialog.close()" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em; border-radius: 0.5em; cursor: pointer; font-weight: bold; margin-top: 1em; text-align: center;">Cancel</button>
+    <button class="ls-action-cancel" onclick="actionDialog.close()" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em; border-radius: 0.5em; cursor: pointer; font-weight: bold; text-align: center;">Cancel</button>
+    <div class="ls-action-clear"></div>
   </div>
 </dialog>
 
@@ -84,6 +85,42 @@ display: block; width: 100%;
   padding-bottom: 5px;
   text-shadow: 0 0 8px var(--pop);
 }
+.ls-action-dialog {
+  background: var(--mood, #000);
+  color: var(--pop, lime);
+  border: 1px solid var(--pop, lime);
+  border-radius: 0 0 1em 1em;
+  padding: 1.25em;
+  z-index: 1000;
+  font-family: monospace;
+  position: fixed;
+  margin: 0;
+  inset: auto 0 auto 0;
+  width: 100vw;
+  max-width: 100vw;
+}
+.ls-action-dialog::backdrop {
+  background: transparent;
+}
+.ls-action-grid {
+  display: block;
+  margin-top: 1em;
+  width: 100%;
+}
+.ls-action-grid button {
+  display: block;
+  float: left;
+  wi-dth: 24%;
+  margin: 0 1% 0.5em 0;
+  min-width: 0;
+}
+.ls-action-cancel {
+  width: 5em;
+  clear: both;
+}
+.ls-action-clear {
+  clear: both;
+}
 </style>
 <script src="../util.js"></script>
 <script>
@@ -128,7 +165,7 @@ CMD.ls = function(s,v,f,cmd){
     if(!isFile) { fold = '/' } 
     // For pure UI, let's just make it look cool based on this guess
     
-    
+    a.dataset.kind = isFile? 'file' : 'folder';
     a.innerHTML = item + fold;
     v.append(a);
   });
@@ -147,14 +184,9 @@ CMD.ls = function(s,v,f,cmd){
       longPressTimer = setTimeout(function() {
           eve.preventDefault();
           eve.stopPropagation();
-          showActionDialog(val);
+          showActionDialog(a, val);
       }, 500); // 500ms long press
 
-      if(val.includes('.') && val !== '..') {
-         kit.say('cat ' + val, 'prompt.try');
-      } else {
-         kit.say('cd ' + val, 'prompt.try');
-      }
     });
 
     B.ear('pointerup',(eve, el)=>{
@@ -176,7 +208,7 @@ CMD.ls = function(s,v,f,cmd){
 
       eve.preventDefault();
       clearTimeout(longPressTimer);
-      showActionDialog(val);
+      showActionDialog(a, val);
     });
 
     B.ear('click',(eve, el)=>{ el = eve.target;
@@ -186,42 +218,89 @@ CMD.ls = function(s,v,f,cmd){
       
       var val = a.dataset.val;
       // If dialog is open, ignore normal clicks
-      if(actionDialog.open) {
-          eve.preventDefault();
-          return;
-      }
-      
-      if(val.includes('.') && val !== '..') {
-        kit.say('', 'prompt');
-        kit.say('cat ' + val, 'prompt');
-      } else {
-        kit.say('', 'prompt');
-        kit.say('ls .', 'prompt');
-      }
-    })
+	      if(actionDialog.open) {
+	          eve.preventDefault();
+	          return;
+	      }
+	      
+	      if(val.includes('.') && val !== '..') {
+	        kit.say('', 'prompt');
+	        kit.say('cat ' + quoteArg(val), 'prompt');
+	      } else {
+	        kit.say('', 'prompt');
+	        if(val === '..') {
+	          kit.say('cd ..', 'prompt');
+	          kit.say('ls .', 'prompt');
+	        } else {
+	          kit.say('cd ' + quoteArg(val), 'prompt');
+	          kit.say('ls .', 'prompt');
+	        }
+	      }
+	    })
 
-    function showActionDialog(val) {
-        dialogTargetFile.innerText = val;
+    function quoteArg(val) {
+        return '"' + String(val).replace(/(["\\$`])/g, '\\$1') + '"';
+    }
+
+    function placeActionDialog(anchor) {
+        var rect = anchor.getBoundingClientRect();
+        var top = Math.min(rect.bottom, window.innerHeight - 40);
+        actionDialog.style.left = '0px';
+        actionDialog.style.right = '0px';
+        actionDialog.style.width = window.innerWidth + 'px';
+        actionDialog.style.maxWidth = window.innerWidth + 'px';
+        actionDialog.style.top = top + 'px';
+        actionDialog.style.bottom = 'auto';
+        actionDialog.style.maxHeight = Math.max(120, window.innerHeight - top) + 'px';
+    }
+
+    function showActionDialog(anchor, val) {
+        var kind = anchor.dataset.kind || 'file';
+        var q = quoteArg(val);
+        dialogTargetFile.innerText = val + (kind === 'folder' ? '/' : '');
+        placeActionDialog(anchor);
         
         btnCat.onclick = function() {
-            kit.say('cat ' + val, 'prompt');
+            if(kind === 'folder') {
+                kit.say('cd ' + q, 'prompt');
+              kit.say('ls .', 'prompt');
+            } else {
+                kit.say('cat ' + q, 'prompt');
+            }
             actionDialog.close();
         };
         btnCp.onclick = function() {
-            kit.say('cp ' + val + ' ', 'prompt.try');
+            var dst = prompt('Copy to where?', val);
+            if(dst) {
+              kit.say('cp ' + q + ' ' + quoteArg(dst), 'prompt');
+            }
             actionDialog.close();
         };
         btnMv.onclick = function() {
-            kit.say('mv ' + val + ' ', 'prompt.try');
+            var dst = prompt('Move to where?', val);
+            if(dst) {
+              kit.say('mv ' + q + ' ' + quoteArg(dst), 'prompt');
+            }
             actionDialog.close();
         };
         btnRm.onclick = function() {
-            kit.say('rm ' + val, 'prompt.try');
+            kit.say((kind === 'folder' ? 'rm -r ' : 'rm ') + q, 'prompt');
             actionDialog.close();
         };
 
-        actionDialog.showModal();
+        if(actionDialog.open) {
+          actionDialog.close();
+        }
+        actionDialog.show();
     }
+
+    B.ear('pointerdown', function(eve){
+      if(!actionDialog.open) { return }
+      if(eve.target.closest('#actionDialog')) { return }
+      actionDialog.close();
+    });
+
+    
   }())||1;
 }
 </script>
