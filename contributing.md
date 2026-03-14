@@ -4,7 +4,7 @@ never use innerHTML
 
 do not use JS to create HTML or set CSS, instead create the HTML and CSS regularly (if necessary, inside a hidden model class div), then in the JS you can clone and insert it where needed. JS can be used to trigger class changes. Favor many small CSS classes that do 1 or maybe a few things, and then reuse those on elements instead of re-writing the same CSS properties again and again.
 
-ideally stick to ES5 syntax except for await (async) and arrow functions. 
+ideally stick to ES5 syntax except please use await (async) and arrow functions. 
 
 always focus on performance & minimalism. Benchmark everything. Use progressive enhancement over graceful degradation. Keep everything modular and loosely coupled, even in the same file, using immediately invoked functions to indicate separate modules. Prefer passing contexts objects around that get mutated over having many parameters for functions. 
 
@@ -12,9 +12,9 @@ always choose code that looks like this:
 ```
 var PDF = {};
 
-PDF.read = function(fileName){
+PDF.read = function(path){
 
-	readFromDisk(filename, PDF.split);
+	readFromDisk(path, PDF.split);
 
 }
 

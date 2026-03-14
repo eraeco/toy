@@ -62,7 +62,29 @@ textarea {
   border-radius: 1em;
   background: transparent;
   backdrop-filter: blur(var(--blur));
+  animation: animate-in-and-out linear both;
+  animation-timeline: view();
 }
+  
+  @keyframes animate-in-and-out {
+  entry 0%  {
+    opacity: 0; transform: scale(0.5);
+  }
+  entry 100%  {
+    opacity: 1; transform: scale(1);
+  }
+  exit 0% {
+    opacity: 1; transform: scale(1);
+  }
+  exit 100% {
+    opacity: 0; transform: scale(0.5);
+  }
+}
+
+
+  
+
+  
 #shell > div > pre {
   white-space: pre-wrap;
   word-break: break-all;
@@ -496,37 +518,21 @@ var p = ["\u001b[?2004h\u001b[0;32m~/marknadal\u001b[0m \u001b[0;97m$\u001b[0m \
 
 ;(function(){ var key;
 window.AI = {
+  async txt(url, res){
+    res = await fetch(url);
+    return await res.text();
+  },
   async shell(q){
-    var s, r = (await (await fetch("https://ch.at/"+encodeURIComponent(q))).text());
-    return r;
-    console.log("AI shell:", r);
-    return r.slice(s = r.indexOf("\nA:")+4, r.indexOf("</textarea>")).trim();
+    return this.txt("https://ch.at/"+encodeURIComponent(q));
   },
   async ask(q){
-    var s, r = (await (await fetch("https://ch.at/"+encodeURIComponent(q))).text());
-    return r.slice(s = r.indexOf("\nA:")+4, r.indexOf("</textarea>")).trim();
+    return this.txt("https://ch.at/"+encodeURIComponent(q));
   },
   async spell(w){
     return this.ask('TEXT ONLY NO HTML spell correct & add next predicted word to this sentence: '+w);
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer YOUR_API_KEY",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openrouter/free",
-        messages: [{role:'system',content:"Super genius coding assistant, hep with this code:"+code},{ role: "user", content: "Fix spelling: 'I hav a qustion'" }],
-        max_tokens: 15,
-        temperature: 0,
-        provider: { sort: "latency" },
-        stream: false
-      }),
-    });
   },
-  async code(q, code, path){ console.log("ask OR", q, code, path);
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  async code(q, code, path, res, data, one, msg){ console.log("ask OR", q, code, path);
+      res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST", headers: { "Authorization": "Bearer "+await AI.key(), "Content-Type": "application/json",
         //'HTTP-Referer': window.location.href, // be ranked?
         'X-Title': 'Code on Phone'
@@ -538,7 +544,10 @@ window.AI = {
         stream: false
       }),
     });
-    return await response.json();
+    data = await res.json();
+    one = (((data || {}).choices || [])[0] || {});
+    msg = (one.message || {}).content;
+    return msg || JSON.stringify(data);
   },
   async key(){
     return key || (key = localStorage.ork || (localStorage.ork = await UI.prompt(`openrouter key?`)));
