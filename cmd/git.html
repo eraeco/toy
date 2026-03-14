@@ -15,6 +15,31 @@
     <button class="fat-btn" onpointerdown="kit.say('git push', 'prompt.try')" onclick="kit.say('git push', 'prompt')">PUSH</button>
   </div>
 </div>
+<template id="empt">
+  <div class="gitnote"></div>
+</template>
+<template id="diffm">
+  <div class="file-card collapsed">
+    <div class="file-header">
+      <div class="file-name"></div>
+      <button class="btn-save-header fat-btn-small">APPLY PATCH</button>
+      <div class="chevron">&#9660;</div>
+    </div>
+    <div class="file-content">
+      <textarea></textarea>
+    </div>
+  </div>
+</template>
+<template id="statm">
+  <div class="status-item">
+    <span class="sticon"></span>
+    <span class="stfile"></span>
+    <span class="sttag"></span>
+  </div>
+</template>
+<template id="textm">
+  <div class="statnote"></div>
+</template>
 <style>
 
 .header {
@@ -85,6 +110,11 @@
 .file-content {
     background: #000;
 }
+.gitnote {
+    padding: 1em;
+    text-align: center;
+    color: #888;
+}
 /* CodeMirror overrides */
 .CodeMirror {
     height: auto !important;
@@ -97,6 +127,12 @@
 .cm-diff-inline-del { background: rgba(255, 0, 0, 0.4); text-decoration: line-through; border-radius: 2px; }
 .cm-s-default .cm-diff-header { color: #aaa; }
 .cm-s-default .cm-diff-file { color: cyan; font-weight: bold; }
+.cmfat {
+  padding-bottom: 5em;
+  font-size: 1.2em;
+  letter-spacing: 0.05em;
+  font-family: 'Courier New', monospace;
+}
 
 /* Status List Styles */
 .ls { 
@@ -125,6 +161,26 @@
   cursor: pointer;
   word-break: break-word;
   user-select: none;
+}
+.ls .statnote {
+  width: 100%;
+  grid-column: 1 / -1;
+  color: #eee;
+  text-align: left;
+  font-family: 'Courier New', monospace;
+  padding: 0.2em 1em;
+  white-space: pre-wrap;
+}
+.sticon {
+  font-size: 1.5em;
+}
+.stfile {
+  display: block;
+}
+.sttag {
+  display: block;
+  font-size: 0.7em;
+  opacity: 0.6;
 }
 .ls .status-item:active {
   background: var(--pop, #ff0055);

@@ -59,6 +59,20 @@ div, ul, ol, li, p, span, form, button, input, textarea, img, frame, iframe {
   max-width: 100%;
   font: inherit;
 }
+dialog {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  color: inherit;
+  max-width: none;
+  max-height: none;
+  width: auto;
+}
+dialog::backdrop {
+  background: transparent;
+}
 button, input, textarea { padding: 0.5em 1em; }
 a, button, input, textarea {
   display: grid; place-items: var(--drip);

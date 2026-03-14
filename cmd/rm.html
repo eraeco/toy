@@ -35,7 +35,7 @@ kit.ear('rm', function hear(eve) {
   var name = cmdLine.replace(/^rm\s+(?:-[rRfi]+\s+)?/, '').trim();
   
   if (output && output.toLowerCase().includes('no such file')) {
-    container.querySelector('.text').inner Text = `NOT FOUND ` + name + ``;
+    container.querySelector('.text').innerText = 'NOT FOUND ' + name;
     container.querySelector('.icon').innerText = '👻';
   } else {
     fname.innerText = name;

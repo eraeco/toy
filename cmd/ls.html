@@ -3,6 +3,19 @@
 <div id="list" class="ls">
 
 </div>
+
+<dialog id="actionDialog" class="ls-action-dialog">
+  <p class="ls-action-head dim fog"><span id="dialogTargetFile"></span></p>
+  <div class="ls-action-grid">
+    <button id="btnTail" class="ls-act dim lip fog sap">tail</button> 
+    <button id="btnCh" class="ls-act dim lip fog sap">chmod</button>
+    <button id="btnCp" class="ls-act dim lip fog sap">copy</button>
+
+    <button id="btnRm" class="ls-act dim lip fog sap ls-act-hot">remove</button>
+    
+  </div>
+</dialog>
+
 <style>
 .ls { 
   width: 100%; 
@@ -72,6 +85,62 @@ display: block; width: 100%;
   padding-bottom: 5px;
   text-shadow: 0 0 8px var(--pop);
 }
+.ls-action-dialog {
+
+
+
+
+back-ground: transparent;
+  col-or: var(--pop);
+  z-index: 1000;
+  font-family: monospace;
+  position: fixed;
+  margin: 0;
+  inset: auto 0 auto 0;
+  width: 100vw;
+  max-width: 100vw;
+  height: auto;
+  overflow: auto;
+}
+
+.ls-action-head {
+
+
+
+ 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ls-action-grid {
+  display: block;
+  float:right;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45em;
+  width: 100%;
+}
+.ls-act {
+
+
+
+
+background: rgba(0,0,0,0.8);
+float: right;
+  cursor: pointer;
+  text-align: center;
+  font: inherit;
+
+}
+.ls-act:active {
+  background: rgba(255,255,255,0.08);
+}
+.ls-act-hot {
+  color: #ff6b6b;
+  border-color: rgba(255,107,107,0.35);
+}
+.ls-act-dim {
+  color: rgba(255,255,255,0.6);
+}
 </style>
 <script src="../util.js"></script>
 <script>
@@ -85,20 +154,21 @@ kit.ear('ls',function hear(eve){
   
 kit.say(['ls','ls .'], 'belt');
 kit.say(['git','git status'], 'belt');
+//kit.say(['Gemini','gemini --help'], 'belt');
 
   
 CMD = {};
 CMD.ls = function(s,v,f,cmd){ 
-  v.tag('ls',+1).innerHTML = '';
+  v.tag('ls',+1).textContent = '';
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
   
 
 
   f = (s.indexOf('\t')+1)? '\t' : /\s+/;
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
-  
+
   var isBack = B.new('a');
-  isBack.innerHTML = '..';
+  isBack.textContent = '..';
   isBack.dataset.val = '..';
   v.append(isBack);
 
@@ -115,38 +185,137 @@ CMD.ls = function(s,v,f,cmd){
     if(!isFile) { fold = '/' } 
     // For pure UI, let's just make it look cool based on this guess
     
-    
-    a.innerHTML = item + fold;
+    a.dataset.kind = isFile? 'file' : 'folder';
+    a.textContent = item + fold;
     v.append(a);
   });
   
   CMD.ls.on = CMD.ls.on || (function(){ 
+    var longPressTimer;
+
     B.ear('pointerdown',(eve, el)=>{ el = eve.target;
       var a = el.closest('a');
       if(!a) return;
       if(!a.closest('.ls')) return;
       
       var val = a.dataset.val;
-      if(val.includes('.') && val !== '..') {
-         kit.say('cat ' + val, 'prompt.try');
-      } else {
-         kit.say('cd ' + val, 'prompt.try');
-      }
+      if(val === '..') return; // Don't long press '..'
+
+      longPressTimer = setTimeout(function() {
+          eve.preventDefault();
+          eve.stopPropagation();
+          showActionDialog(a, val);
+      }, 500); // 500ms long press
+
     });
+
+    B.ear('pointerup',(eve, el)=>{
+      clearTimeout(longPressTimer);
+    });
+
+    B.ear('pointermove',(eve, el)=>{
+      clearTimeout(longPressTimer);
+    });
+    
+    B.ear('contextmenu', (eve, el) => {
+      el = eve.target;
+      var a = el.closest('a');
+      if(!a) return;
+      if(!a.closest('.ls')) return;
+      
+      var val = a.dataset.val;
+      if(val === '..') return;
+
+      eve.preventDefault();
+      clearTimeout(longPressTimer);
+      showActionDialog(a, val);
+    });
+
     B.ear('click',(eve, el)=>{ el = eve.target;
       var a = el.closest('a');
       if(!a) return;
       if(!a.closest('.ls')) return;
       
       var val = a.dataset.val;
-      if(val.includes('.') && val !== '..') {
-        kit.say('', 'prompt');
-        kit.say('cat ' + val, 'prompt');
-      } else {
-        kit.say('', 'prompt');
-        kit.say('ls .', 'prompt');
-      }
-    })
+      // If dialog is open, ignore normal clicks
+	      if(actionDialog.open) {
+	          eve.preventDefault();
+	          return;
+	      }
+	      
+	      if(val.includes('.') && val !== '..') {
+	        kit.say('', 'prompt');
+	        kit.say('cat ' + quoteArg(val), 'prompt');
+	      } else {
+	        kit.say('', 'prompt');
+	        if(val === '..') {
+	          kit.say('cd ..', 'prompt');
+	          kit.say('ls .', 'prompt');
+	        } else {
+	          kit.say('cd ' + quoteArg(val), 'prompt');
+	          kit.say('ls .', 'prompt');
+	        }
+	      }
+	    })
+
+    function quoteArg(val) {
+        return '"' + String(val).replace(/(["\\$`])/g, '\\$1') + '"';
+    }
+
+    function placeActionDialog(anchor) {
+        var rect = anchor.getBoundingClientRect();
+        var pad = 12;
+        var roomDown = window.innerHeight - rect.bottom - pad;
+        var roomUp = rect.top - pad;
+        var useUp = roomDown < 180 && roomUp > roomDown;
+        actionDialog.style.left = '0px';
+        actionDialog.style.right = '0px';
+        actionDialog.style.width = window.innerWidth + 'px';
+        actionDialog.style.maxWidth = window.innerWidth + 'px';
+        if(useUp) {
+          actionDialog.style.top = 'auto';
+          actionDialog.style.bottom = Math.max(pad, window.innerHeight - rect.top) + 'px';
+          actionDialog.style.maxHeight = Math.max(120, roomUp) + 'px';
+        } else {
+          actionDialog.style.top = Math.max(pad, rect.bottom) + 'px';
+          actionDialog.style.bottom = 'auto';
+          actionDialog.style.maxHeight = Math.max(120, roomDown) + 'px';
+        }
+    }
+
+    function showActionDialog(anchor, val) {
+        var kind = anchor.dataset.kind || 'file';
+        var q = quoteArg(val);
+        dialogTargetFile.innerText = val + (kind === 'folder' ? '/' : '');
+        placeActionDialog(anchor);
+        
+        
+        btnCp.onclick = function() {
+            var dst = prompt('Copy to where?', val);
+            if(dst) {
+              kit.say('cp ' + q + ' ' + quoteArg(dst), 'prompt');
+            }
+            actionDialog.close();
+        };
+        
+        btnRm.onclick = function() {
+            kit.say((kind === 'folder' ? 'rm -r ' : 'rm ') + q, 'prompt');
+            actionDialog.close();
+        };
+
+        if(actionDialog.open) {
+          actionDialog.close();
+        }
+        actionDialog.show();
+    }
+
+    B.ear('pointerdown', function(eve){
+      if(!actionDialog.open) { return }
+      if(eve.target.closest('#actionDialog')) { return }
+      actionDialog.close();
+    });
+
+    
   }())||1;
 }
 </script>

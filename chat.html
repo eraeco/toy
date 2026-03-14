@@ -11,8 +11,7 @@
     
   </div>
 
-  <button id="scroll-down-btn" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:6em; right:1em; z-index:101; background:var(--pop, lime); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:1.5em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.5;">↓</button>
-
+  
   <form onsubmit="kit.say('','prompt'); return false;">
     <div id="help"></div>
     
@@ -20,6 +19,10 @@
       <textarea id="prompt" name="cmd" placeholder="$" autokomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" rows="1"></textarea>
 
   </form>
+
+<button id="scroll" onclick="B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; this.style.display='none';" style="display:none; position:fixed; bottom:6em; right:1em; z-index:101; background:var(--pop, lime); color:var(--mood, black); border:none; border-radius:50%; width:2em; height:2em; font-size:2em; cursor:pointer; align-items:center; justify-content:center; text-align:center;opacity:0.6;">↓</button>
+
+
 
 <style>
 :root { --fill: var(--mood); }
@@ -72,6 +75,13 @@ textarea {
 }
 #help {
   color: lime;
+  min-height: 1.2em;
+  margin-bottom: 0.4em;
+  opacity: 1;
+  transition: opacity 2.4s linear;
+}
+#help.off {
+  opacity: 0;
 }
 .kit {
   display: flex;
@@ -81,7 +91,7 @@ textarea {
   padding: 0.2em;
   padding-left: 70vw;
   background: transparent;
-z-index: 99;
+z-index: 101;
   overflow-x: scroll;
   overflow-y: scroll;
   scrollbar-width: none;
@@ -113,6 +123,11 @@ z-index: 99;
   background: var(--pop);
   color: var(--mood);
   transform: scale(0.92);
+  text-shadow: none;
+}
+.kit button.live {
+  background: var(--pop);
+  color: var(--mood);
   text-shadow: none;
 }
 
@@ -175,6 +190,7 @@ var prompt;
 var shell = B.all('#shell')[0];
 var help = B.all('#help')[0];
 var belt = B.all('.kit')[0];
+var mod = {};
 (prompt = B.all('#prompt')[0]).focus();
 
 
@@ -195,8 +211,71 @@ kit.ear('prompt.try',(eve)=>{
   prompt.value = eve.detail||eve.data;
 });
 
+var put = function(txt, a, z, s){
+  prompt.focus();
+  a = prompt.selectionStart || 0;
+  z = prompt.selectionEnd || 0;
+  s = prompt.value;
+  prompt.value = s.slice(0, a) + txt + s.slice(z);
+  a += txt.length;
+  prompt.setSelectionRange(a, a);
+  autoGrow(prompt);
+};
+
+var helpSay = function(txt){
+  if(help.wait){ clearTimeout(help.wait); }
+  if(help.gone){ clearTimeout(help.gone); }
+  help.classList.remove('off');
+  help.textContent = txt || '';
+  if(!txt){ return; }
+  help.wait = setTimeout(function(){
+    help.classList.add('off');
+  }, 1800);
+  help.gone = setTimeout(function(){
+    help.textContent = '';
+    help.classList.remove('off');
+  }, 4300);
+};
+
+var ctrl = function(key, code){
+  if(!key || key.length !== 1){ return ''; }
+  code = key.toUpperCase().charCodeAt(0);
+  if(code >= 65 && code <= 90){ return String.fromCharCode(code - 64); }
+  if(code >= 91 && code <= 95){ return String.fromCharCode(code - 64); }
+  if(code === 54){ return String.fromCharCode(30); }
+  if(code === 191){ return String.fromCharCode(31); }
+  return '';
+};
+
+var keyUi = function(){
+  var on = B.all('#ctrl')[0];
+  if(on){ on.classList[mod.ctrl ? 'add' : 'remove']('live'); }
+};
+
+var tapKey = function(name){
+  if(name === 'esc'){ put('\u001b'); return; }
+  if(name === 'tab'){ put('\t'); return; }
+  if(name === 'alt'){ put('\u001b'); return; }
+  if(name === 'cmd'){ put('\u001b'); return; }
+  if(name === 'ctrl'){
+    mod.ctrl = !mod.ctrl;
+    keyUi();
+  }
+};
+
 var history = [], hi=1;
 prompt.onkeydown = function(eve){
+  var ch;
+  if(mod.ctrl && eve.key && eve.key.length === 1 && !eve.altKey && !eve.metaKey){
+    ch = ctrl(eve.key);
+    if(ch){
+      eve.preventDefault();
+      put(ch);
+      mod.ctrl = 0;
+      keyUi();
+      return;
+    }
+  }
   if (eve.key === 'Enter' && !eve.shiftKey) {
     eve.preventDefault();
     kit.say('', 'prompt');
@@ -221,10 +300,23 @@ kit.ear('belt', function(eve, data, b){
   b.id = b.textContent = name;
 
   b.onclick = function(){
+    if(data.key){ tapKey(name); return; }
     kit.say(data.prompt||data[1], 'prompt');
   };
   belt.append(b);
 });
+
+                         setTimeout(()=>{
+[
+  {name: 'esc', key: 1},
+  {name: 'ctrl', key: 1},
+  {name: 'tab', key: 1},
+  {name: 'alt', key: 1},
+  {name: 'cmd', key: 1}
+].forEach(function(v){
+  kit.say(v, 'belt');
+});
+},999);
                          
 prompt.oninput = function(eve){
   autoGrow(prompt);
@@ -232,14 +324,13 @@ prompt.oninput = function(eve){
   if(prompt.wait){ clearTimeout(prompt.wait) }
   prompt.wait = setTimeout(async function(){
     var answer = await AI.shell("1 sentence reply for terminal shell or code help:" + prompt.value);
-    var v = B.new('div'); v.innerHTML = answer; // NEVER ADD TO DOM, TO PREVENT XSS!!!!!
-    v = v.all('.a')[0] || v;
+    var doc = new DOMParser().parseFromString(answer, 'text/html');
+    var v = doc.querySelector('.a') || doc.body;
     var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-    help.innerHTML = ''; // empty!
-    help.textContent = v.textContent || '';
-    prompt.try = (v.all('code')[0] || v.all('b')[0] || {}).textContent||'';
+    helpSay(v.textContent || '');
+    prompt.try = ((v.querySelector('code') || v.querySelector('b')) || {}).textContent||'';
     if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-    else { var btn = B.all('#scroll-down-btn')[0]; if(btn) btn.style.display = 'flex'; }
+    else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
   },333);
 }
 const autoGrow = (textarea) => {
@@ -259,7 +350,7 @@ autoGrow(prompt);
 
 window.addEventListener('scroll', function() {
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
-  var btn = B.all('#scroll-down-btn')[0];
+  var btn = B.all('#scroll')[0];
   if(atBottom && btn) {
     btn.style.display = 'none';
   }
@@ -287,7 +378,7 @@ var stream = function(t){
   stream.last = (window.shellReply || {}).clean ? window.shellReply.clean((stream.last||'')+t) : ((stream.last||'')+t);
   var atBottom = (B.scrollHeight - B.scrollTop - B.clientHeight < 50) && (shell.scrollHeight - shell.scrollTop - shell.clientHeight < 50);
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-  else { var btn = B.all('#scroll-down-btn')[0]; if(btn) btn.style.display = 'flex'; }
+  else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
   (stream.eat || CMD.bash)(stream.last);
 }, CMD = {};
 
@@ -390,7 +481,7 @@ CMD.bash = function(S, cmdl, cmd, tmp){
     shell.append(v);
   });
   if(atBottom) { B.scrollTop = B.scrollHeight; shell.scrollTop = shell.scrollHeight; }
-  else { var btn = B.all('#scroll-down-btn')[0]; if(btn) btn.style.display = 'flex'; }
+  else { var btn = B.all('#scroll')[0]; if(btn) btn.style.display = 'flex'; }
 }
 }());
 kit.ear('clear',eve=>{return;shell.innerHTML = ""; });

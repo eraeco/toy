@@ -29,22 +29,22 @@ kit.ear('pwd', function hear(eve) {
   
   if (path) {
     var parts = path.split('/').filter(Boolean);
-    content.innerHTML = '';
+    content.replaceChildren();
     
     if (path.startsWith('/')) {
       var root = B.new('div'); root.className = 'crumb'; root.innerText = '/';
-      root.onclick = () => { kit.say('cd /', 'prompt.try'); };
+      root.onclick = ()=>{ kit.say('cd /', 'prompt.try'); };
       content.appendChild(root);
     }
     
     var currentPath = path.startsWith('/') ? '' : '.';
-    parts.forEach(p => {
+    parts.forEach((p)=>{
       currentPath += '/' + p;
-      let targetPath = currentPath; // Capture block scope
+      var targetPath = currentPath;
       var crumb = B.new('div');
       crumb.className = 'crumb';
       crumb.innerText = p;
-      crumb.onclick = () => { kit.say('cd ' + targetPath, 'prompt.try'); };
+      crumb.onclick = ()=>{ kit.say('cd ' + targetPath, 'prompt.try'); };
       content.appendChild(crumb);
     });
   } else {
