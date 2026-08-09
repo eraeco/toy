@@ -1,0 +1,333 @@
+<link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
+
+<shell class="wane">
+  <task>
+    <symbol>$ </symbol>
+    <prompt contenteditable="true"><br/></prompt>
+    <raw></raw>
+    <iframe></iframe>
+    <style>
+
+    </style>
+  </task>
+</shell>
+
+<kit><tin></tin></kit>
+
+<button id="look">↓</button>
+
+<fit>
+  <belt></belt>
+  <tray></tray>
+  <button></button>
+</fit>
+
+<style>
+:root { --fill: var(--mood); --font: 'Courier New', monospace; }
+body { display: block; background: var(--fill); }
+shell {
+  width: 100%;
+  font: var(--font);
+  font-size: var(--cs);
+  color: var(--pop);
+}
+task {
+  margin: 1em 0;
+}
+symbol {
+  display: inline;
+  float: left;
+  white-space: pre-wrap;
+}
+prompt {
+  display: block;
+  width: 100%;
+  min-height: 1em;
+  caret-shape: block;
+  white-space: pre-wrap;
+}
+fit { display: none; }
+::selection { background: var(--pop); color: var(--fill); }
+fit { display: none; }
+
+iframe {
+  height: 0;
+  width: 100%;
+  max-hei-ght: calc(100dvh - 3em - 3em);
+  transition: height 120ms ease;
+}
+iframe.shut {
+  height: 0 !important;
+}
+iframe.term {
+  height: calc(100dvh - 4em);
+  max-height: calc(100dvh - 4em);
+}
+
+</style>
+<script src="util.js"></script>
+<script>;(function(shell){
+var root = shell.all('shell')[0];
+var task = root.all('task')[0];
+var model = task.cloneNode(1);
+shell.seq = 0;
+shell.belt = {};
+(shell.$ = task.all('prompt')[0]).focus();
+
+kit.ear('chat',(eve, raw)=>{ raw = eve.detail || eve.data || eve;
+  if('{'==raw[0]){ try{ if(shell.hook(JSON.parse(raw))){ return } }catch(e){}}
+  shell.stream(raw);
+});
+
+shell.ear('keydown',function(eve){
+  if(!eve.target.matches('prompt')){ return }
+  shell.$ = eve.target;
+  if('enter' == eve.key.toLowerCase() && !eve.shiftKey){
+    eve.preventDefault();
+    kit.say('', 'prompt');
+    return;
+  }
+});
+kit.ear('prompt',(eve)=>{
+  var cmd = eve.detail||eve.data;
+  cmd = (cmd || shell.$.textContent || '').trim();
+  shell.$.textContent = cmd;
+  //shell.$.removeAttribute('contenteditable');
+  shell.live = shell.$.up('task')[0];
+  shell.used = 1;
+  kit.say(cmd+'\r','host');
+  screen.buzz();
+});
+kit.ear('prompt.set', function(eve, cmd, t, p){
+  cmd = eve.detail || eve.data || '';
+  t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
+  p = t && t.all('prompt')[0];
+  if(p){
+    t.show = cmd;
+    p.textContent = cmd;
+  }
+});
+kit.ear('prompt.try',(eve, all, $, r, s)=>{
+  var cmd = eve.detail || eve.data || '';
+  if(!cmd){ return }
+  next();
+  all = root.all('prompt[contenteditable]');
+  if(!($ = all[all.length - 1])){ return }
+  $.textContent = cmd;
+  (shell.$ = $).focus();
+  r = document.createRange();
+  r.selectNodeContents($);
+  r.collapse(false); // caret at the end — typing continues the command, return runs it
+  s = getSelection();
+  s.removeAllRanges();
+  s.addRange(r);
+});
+kit.ear('prompt.same',(eve)=>{
+  var msg = eve.detail||eve.data||{};
+  //console.log('prompt.same:', msg);
+  var cmd = (msg.run || msg.cmd || msg).trim();
+  var t = (eve.target && eve.target.up) ? eve.target.up('task')[0] : null;
+  if(!cmd || !t){ return }
+  t.bin = msg.bin || '';
+  t.cmd = msg.cmd || cmd;
+  t.same = 1;
+  t.stay = msg.stay || 0;
+  t.file = msg.file || '';
+  shell.live = t;
+  shell.used = 1;
+  kit.say(cmd+'\r','host');
+  screen.buzz();
+});
+
+shell.raw = '';
+shell.stream = function(raw){
+  var clean, part, done, i;
+  (window.shellReply || {}).maybeContinue && window.shellReply.maybeContinue(raw, {state: shell, send: function(c){ kit.say(c, 'host') }});
+  if(shell.tty){
+    kit.say(raw, 'term', shell.tty);
+    shell.code = ((shell.code || '') + (raw || '')).slice(-4096);
+    if(/\x1b\[\?(?:47|1047|1049)l/.test(shell.code) ||
+      ('alt' !== shell.tty.mode && /(?:^|\n)\S*[$#>%]\s*$/.test(shell.code.flat()))){
+      shell.tty = null;
+      shell.code = '';
+      shell.raw = '';
+      next();
+    }
+    return;
+  }
+  shell.raw += raw || '';
+  if(i = shell.raw.tty()){
+    shell.term(shell.raw, i);
+    return;
+  }
+  clean = (window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw;
+  part = (String.prototype.splitPrompts ? clean.splitPrompts() : String.prompts(clean));
+  if(part.length > 1){
+    done = part.slice(0, -1);
+    shell.raw = part[part.length - 1];
+    for(i = 0; i < done.length; i += 1){ shell.bash(done[i]) }
+  }
+  if(shell.live && shell.live.all){ text(out(shell.live), ((window.shellReply || {}).clean ? window.shellReply.clean(shell.raw) : shell.raw).flat()) }
+}
+shell.term = function(raw, mode, t, all){
+  t = shell.live;
+  if(!t){ return }
+  t.bin = 'term';
+  shell.raw = '';
+  shell.bash(raw);
+  all = t.all('iframe:not(.shut)');
+  shell.tty = all[all.length - 1] || null;
+  if(shell.tty){ shell.tty.mode = mode; shell.tty.classList.add('term') }
+};
+shell.last = function(cmd, cut){
+  while((cut = cmd.cut('&&', ESC))[1]){ cmd = cut[2] }
+  return cmd.trim();
+}
+shell.head = function(raw, flat, line, hit, cmd, last){
+  flat = (raw || '').flat();
+  line = flat.split(/\r\n|\n|\r/)[0] || '';
+  hit = line.match(/^(.*?)(\$|#|>|%|~%|PS>)\s*([\s\S]*)$/);
+  cmd = line.cmd();
+  last = shell.last(cmd);
+  return {
+    path: hit ? hit[1].trim() : '',
+    sign: hit ? hit[2].trim() : '$',
+    line: line,
+    cmd: cmd,
+    bin: (last.split(/\s+/)[0] || '').trim().toLowerCase()
+  };
+}
+shell.bash = function(raw, t, h, r, i, old, src){
+  h = shell.head(raw);
+  if(!h.cmd){ return }
+  if((/^stty\b|^clear$/.test(h.cmd) || /\$$/.test(h.cmd))
+    && !(shell.live && ((shell.live.all('prompt')[0]||'').textContent||'').trim() === h.cmd)){ return } // PTY init/echo noise (boot & reconnect) — never a task, never consumes shell.live
+  t = shell.live;
+  if(!t){
+    if(!shell.used){ return } // PTY boot noise (stty/clear echoes) — no task bubbles before first user input
+    t = fresh();
+  }
+  t.job || (t.job = '' + (++shell.seq));
+  t.setAttribute('job', t.job);
+  shell.live = null;
+  h.bin = t.bin || h.bin;
+  h.cmd = t.cmd || h.cmd;
+  t.bin = '';
+  t.cmd = '';
+  if(h.bin){ t.setAttribute('bin', h.bin) }
+  text(t.all('symbol')[0], h.sign + ' ');
+  text(t.all('prompt')[0], t.show || h.cmd);
+  t.show = '';
+  t.all('prompt')[0].removeAttribute('contenteditable');
+  r = out(t);
+  text(r, (raw || '').flat());
+  if(!t.parentNode){ root.append(t) }
+  if(h.bin && t.stay){
+    old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+    if(old){
+      kit.say({raw: raw, cmd: h.cmd, file: t.file}, h.bin, old);
+      r.remove();
+    }
+  } else if(h.bin){
+    old = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+    i = old;
+    src = './cmd/' + h.bin + '.html';
+    if(old && old.getAttribute('src') && !t.same){
+      i = old.cloneNode(0);
+      old.parentNode.insertBefore(i, old.nextSibling);
+      old.classList.add('shut');
+      setTimeout(function(){
+        if(old.parentNode){ old.remove() }
+      }, 140);
+    }
+    i.onload = function(){
+      if(!i.readyState){ return i.remove() }
+      i.classList.remove('shut');
+      kit.say(raw, h.bin, i);
+      r.remove();
+    };
+    i.src = src;
+  }
+  t.same = 0;
+  t.stay = 0;
+  t.file = '';
+  if('term' !== h.bin){ next() }
+}
+
+shell.hook = function(obj, t, i){
+  if(!obj){ return 0 }
+  if(!obj['#']){ return 0 }
+  t = root.querySelector('task[job="' + String(obj['#']).replace(/"/g, '') + '"]');
+  if(!t){ return obj.type? 1 : 0 } // typed reply for a dead task: drop, don't leak JSON into the stream
+  i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+  if(!i){ return obj.type? 1 : 0 }
+  kit.say(obj, obj.type || t.getAttribute('bin') || 'chat', i);
+  return 1;
+}
+
+function text(v, s){
+  v.textContent = s || '';
+  if(!s){ v.append(document.createElement('br')) }
+  return v;
+}
+
+function out(t, r, i){
+  r = t.all('raw')[0];
+  if(r){ return r }
+  r = model.all('raw')[0].cloneNode(1);
+  i = t.all('iframe:not(.shut)')[0] || t.all('iframe')[0];
+  if(i && i.parentNode){ i.parentNode.insertBefore(r, i) }
+  else { t.append(r) }
+  return r;
+}
+
+function fresh(t){
+  t = model.cloneNode(1);
+  t.job = '' + (++shell.seq);
+  t.setAttribute('job', t.job);
+  text(t.all('symbol')[0], '$ ');
+  text(t.all('prompt')[0], '');
+  t.all('prompt')[0].setAttribute('contenteditable', 'true');
+  text(t.all('raw')[0], '');
+  t.all('iframe')[0].removeAttribute('src');
+  return t;
+}
+
+function next(t){
+  if((root.lastElementChild || {}).all && root.lastElementChild.all('prompt[contenteditable=true]')[0]){ return }
+  t = fresh();
+  root.append(t);
+  shell.$ = t.all('prompt')[0];
+  //shell.$.focus();
+}
+
+kit.ear('belt',(eve,t)=>{ eve = eve.detail;
+  if('string' == typeof eve[0]){ return } // TODO: bug: implement single button non-tray items.
+  document.body.all('tin')[0].pin(shell.new('fit belt').pin(t=shell.new('fit tray')));
+  eve.forEach((cmd,b)=>{
+    if((shell.belt||'')[cmd[0]]){ return }
+    b = t.new('button');
+    b.onclick = function(){ kit.say(cmd[1], 'prompt') };
+    b.textContent = cmd[0];
+    (shell.belt=shell.belt||{})[cmd[0]]=1;
+    t.pin(b);
+  });
+  if(t.matches(':empty')){ t.parentNode.remove() }
+});
+
+kit.ear('clear',(eve,v,p)=>{ // clear is the 1 special command exception.
+  if(!eve.target){ return }
+  v = eve.target.closest('task');
+  while(p = v.previousSibling){ v.remove(); v=p; }
+  v.remove();
+});
+kit.say(localStorage.pwd||'ls .','prompt'); // this is an optional progressive enhancement, shell does not know about ls, it is just blindly calling for an enhancement.
+
+
+
+
+
+
+}(window.shell = document.body));
+</script>
+<script src="aid.js"></script>

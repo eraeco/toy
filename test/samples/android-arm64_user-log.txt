@@ -1,0 +1,31 @@
+[?2004h[0;32m~/node_modules/toy[0m [0;97m$[0m whoami
+[?2004lu0_a410
+[?2004h[0;32m~/node_modules/toy[0m [0;97m$[0m ls --color=auto
+[?2004l[0m[01;34m+[0m          CNAME      app.css    [01;34mcmd[0m              index.html     sw.js
+AGENTS.md  GEMINI.md  app.html   contributing.md  manifest.json  [01;34mtest[0m
+CLAUDE.md  README.md  chat.html  [01;34mgun[0m              shell.html     util.js
+[?2004h[0;32m~/node_modules/toy[0m [0;97m$[0m cd test
+[?2004l[?2004h[0;32m~/.../toy/test[0m [0;97m$[0m ls --color=auto
+[?2004l generate-samples.js    [0m[01;34msamples[0m            test-regex.js
+ generate-user-log.js  'test $ file.txt'   test-split.js
+[?2004h[0;32m~/.../toy/test[0m [0;97m$[0m cd samples
+[?2004l[?2004h[0;32m~/.../test/samples[0m [0;97m$[0m git status
+[?2004lOn branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   ../../app.html[m
+	[31mmodified:   ../../cmd/git/branch.html[m
+	[31mmodified:   android-arm64_user-log.txt[m
+	[31mmodified:   ../../util.js[m
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	[31m../test-regex.js[m
+	[31m../test-split.js[m
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[?2004h[0;32m~/.../test/samples[0m [0;97m$[0m exit
+[?2004lexit

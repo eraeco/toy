@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
+
+<p>Branch <a id="Branch" onclick="kit.say('git branch -a','prompt')"></a> is <span id="Status"></span> with <a id="Upstream"></a>.</p>
+
+<link rel="stylesheet" href="../../app.css">
+<style>
+</style>
+<script src="../../util.js"></script>
+<script>
+kit.ear('status', function hear(f){ hear.off(); f = f.detail || f.data || "";
+  Branch.innerText = ((f.cut('On branch')[2]||'').cut(['\r','\n'])[0]||'').trim();
+  Status.innerText = ((f.cut('branch is')[2]||'').cut('with')[0]||'').trim();
+  Upstream.innerText = ((f.cut('with')[2]||'').cut('.')[0]||'').trim();
+});
+</script>

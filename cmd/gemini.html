@@ -1,0 +1,194 @@
+<link rel="stylesheet" href="../gun/kit/web.css">
+<script src="../gun/kit/web.js"></script>
+
+<div class="box">
+  <div class="bar">
+    <span class="tag">gemini</span>
+    <span id="hd" class="val"></span>
+    <span id="sid" class="id"></span>
+    <button id="stop" class="mini" type="button">stop</button>
+  </div>
+  <div id="bod" class="bod"></div>
+</div>
+
+<!-- templates -->
+<div class="model">
+  <pre class="tpl txt blk"></pre>
+  <div class="tpl thk"><p class="tog">&#9654; thinking</p><pre class="inn blk"></pre></div>
+  <pre class="tpl fail blk"></pre>
+</div>
+
+<style>
+body { display: block; min-height: 0; overflow: hidden; }
+.bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
+.val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
+.id { font-size: 0.6em; opacity: 0.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10em; cursor: pointer; }
+.bod { padding: 0.6em; display: block; }
+.bod > * { display: block; margin-bottom: 0.6em; }
+.blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
+.thk { border-left: 2px solid var(--pop); padding-left: 0.6em; opacity: 0.55; display: block; }
+.thk .inn { display: none; }
+.thk.open .inn { display: block; }
+.tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
+.run { opacity: 0.65; border-left: 2px solid color-mix(in srgb, var(--pop) 40%, transparent); padding-left: 0.5em; }
+.fail { color: var(--err); }
+.usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding: 0.4em 0; margin-top: 0.4em; display: block; }
+button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
+.mini { min-width: 3.8em; font-size: 0.78em; opacity: 0.7; }
+</style>
+
+<script src="../util.js"></script>
+<script>;(function(){
+
+var hd  = B.all('#hd')[0];
+var sid = B.all('#sid')[0];
+var bod = B.all('#bod')[0];
+var stop = B.all('#stop')[0];
+sid.onclick = function(){ if(GEM.sid) kit.up('gemini --resume '+GEM.sid+' ', 'prompt.try') };
+
+var GEM = {};
+GEM.sid = null;
+GEM.job = job();
+GEM.on  = 0;
+GEM.textEl = null;
+GEM.thinkEl = null;
+GEM.toolEls = {};
+
+GEM.send = function(say, act){
+  var msg = {'^': './cmd/gemini.js', '#': GEM.job || '1'};
+  if(say){ msg.$ = say; GEM.textEl = null; GEM.thinkEl = null; GEM.toolEls = {} }
+  if(act){ msg.act = act }
+  if(GEM.sid){ msg.session = GEM.sid }
+  if(GEM.cwd || localStorage.cwd){ msg.cwd = GEM.cwd || localStorage.cwd }
+  GEM.on = 1;
+  kit.up(msg, 'host');
+};
+
+GEM.done = function(){
+  GEM.on = 0;
+  kit.say({}, 'style');
+};
+
+GEM.got = function(m){
+  if(m.$){ GEM.fail(m.$) }
+  if(m.event){ GEM.evt(m.event) }
+  if(m.done){
+    if(m.session){ GEM.sid = m.session }
+    if(GEM.sid){ sid.textContent = GEM.sid.slice(0,8); sid.title = 'click to copy: '+GEM.sid }
+    kit.up(GEM.sid, 'gemini-session');
+    GEM.done();
+  }
+};
+
+GEM.evt = function(u){
+  var t = u.sessionUpdate || '';
+
+  if(t === 'session-init'){ GEM.sid = u.sessionId; return }
+
+  if(t === 'agent_message_chunk'){
+    var txt = (u.content||{}).text || '';
+    if(!txt){ return }
+    if(!GEM.textEl){
+      GEM.textEl = B.all('.tpl.txt')[0].cloneNode(true);
+      GEM.textEl.classList.remove('tpl'); GEM.textEl.textContent = '';
+      GEM.textEl._buf = '';
+      bod.append(GEM.textEl);
+    }
+    GEM.textEl._buf += txt;
+    GEM.textEl.textContent = GEM.textEl._buf;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'agent_thought_chunk'){
+    var txt = (u.content||{}).text || '';
+    if(!txt){ return }
+    if(!GEM.thinkEl){
+      GEM.thinkEl = B.all('.tpl.thk')[0].cloneNode(true);
+      GEM.thinkEl.classList.remove('tpl');
+      GEM.thinkEl.querySelector('.tog').onclick = function(){ GEM.thinkEl.classList.toggle('open') };
+      GEM.thinkEl._buf = '';
+      bod.append(GEM.thinkEl);
+    }
+    GEM.thinkEl._buf += txt;
+    GEM.thinkEl.querySelector('.inn').textContent = GEM.thinkEl._buf;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'tool_call'){
+    // host runs the tool; log a short $ line only
+    var id = u.toolCallId || '';
+    var tip = u.title || (id || 'tool').replace(/-\d+-\d+$/, '').replace(/_/g, ' ');
+    var v = B.all('.tpl.txt')[0].cloneNode(true);
+    v.classList.remove('tpl');
+    v.classList.add('run');
+    v.textContent = '$ ' + tip;
+    bod.append(v);
+    if(id) GEM.toolEls[id] = v;
+    GEM.textEl = null;
+    GEM.thinkEl = null;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'tool_call_update'){
+    var id = u.toolCallId || '';
+    var v = GEM.toolEls[id];
+    if(!v){ return }
+    var out = '';
+    (u.content || []).forEach(function(c){ out += ((c.content || {}).text || '') });
+    if(!out) out = u.output || u.result || '';
+    if(typeof out !== 'string') out = JSON.stringify(out, null, 2);
+    if(out) v.textContent += '\n' + out;
+    GEM.textEl = null;
+    GEM.thinkEl = null;
+    kit.say({}, 'style');
+    return;
+  }
+
+  if(t === 'available_commands_update' || t === 'current_mode_update' || t === 'usage_update' || t === 'session_info_update' || t === 'config_option_update'){ return }
+};
+
+GEM.fail = function(t){
+  var v = B.all('.tpl.fail')[0].cloneNode(true);
+  v.classList.remove('tpl'); v.textContent = t;
+  bod.append(v); kit.say({}, 'style');
+};
+
+GEM.usr = function(txt){
+  var u = B.new('pre');
+  u.className = 'usr blk';
+  u.textContent = '> ' + txt;
+  bod.append(u);
+  kit.say({}, 'style');
+};
+
+kit.ear('gemini', function(eve){
+  var d = eve.detail || eve.data || {};
+
+  if(d.type === 'gemini' || d['^']){ GEM.got(d); return }
+
+  var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  raw = raw.cmd();
+  GEM.job = (typeof d === 'object' && d['#']) ? d['#'] : (GEM.job || '1');
+  var s = typeof d === 'object' ? (d.session || null) : null;
+  var cwd = typeof d === 'object' ? (d.cwd || '') : '';
+  var m = raw.match(/^gemini\s+--resume\s+(\S+)\s*([\s\S]*)$/i);
+  if(m){ GEM.sid = m[1]; sid.textContent = GEM.sid.slice(0,8); sid.title = 'click to copy: '+GEM.sid }
+  var say = (m ? m[2] : raw.replace(/^gemini\s*/i, '')).trim();
+  if(cwd){ GEM.cwd = cwd }
+  if(s && !m){ GEM.sid = s } // explicit --resume beats the shell's remembered session
+  if(!say){ hd.textContent = 'type: gemini <prompt>'; kit.say({}, 'style'); return }
+
+  GEM.usr(say);
+  GEM.send(say);
+});
+
+stop.onclick = function(){
+  if(!GEM.on){ return }
+  GEM.send('', 'stop');
+  GEM.done();
+};
+
+}());</script>

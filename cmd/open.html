@@ -1,0 +1,197 @@
+<link rel="stylesheet" href="../gun/kit/web.css" />
+<script src="../gun/kit/web.js"></script>
+
+<div class="box">
+    <div class="bar">
+        <span class="tag">open</span>
+        <input
+            id="addr"
+            class="val"
+            value=""
+            placeholder="localhost:PORT/path"
+            spellcheck="false"
+        />
+        <button id="go" class="act">go</button>
+        <button id="ref" class="act">↻</button>
+    </div>
+    <div id="view"></div>
+</div>
+
+<style>
+    body {
+        display: block;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .bar {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        padding: 0.3em 0.6em;
+        border-bottom: 1px solid var(--pop);
+    }
+    .tag {
+        font-weight: 900;
+        white-space: nowrap;
+    }
+    .val {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: none;
+        color: inherit;
+        font: inherit;
+        font-size: 0.8em;
+        padding: 0.2em;
+    }
+    .act {
+        background: transparent;
+        border: 1px solid var(--pop);
+        color: var(--pop);
+        border-radius: 0.3em;
+        padding: 0.2em 0.5em;
+        font-size: 0.8em;
+        cursor: pointer;
+        white-space: nowrap;
+        min-width: auto;
+    }
+    .act:active {
+        background: var(--pop);
+        color: var(--mood);
+    }
+    #view {
+        display: block;
+        padding: 0;
+        width: 100%;
+        min-height: 4em;
+    }
+    #view iframe {
+        width: 100%;
+        min-height: 10em;
+        border: none;
+        display: block;
+        background: white;
+    }
+    .err {
+        color: var(--err);
+        padding: 0.6em;
+        font-family: monospace;
+        font-size: 0.85em;
+        display: block;
+        text-align: left;
+    }
+    .load {
+        opacity: 0.5;
+        padding: 0.6em;
+        font-family: monospace;
+        font-size: 0.85em;
+        display: block;
+        text-align: left;
+    }
+</style>
+
+<script>
+    (function () {
+        var view = document.getElementById("view");
+        var addr = document.getElementById("addr");
+        var port, path;
+
+        var load = function (url) {
+            url = url || addr.value || "";
+            var m = url.match(/^(?:(?:localhost|127\.0\.0\.1):)?(\d+)(\/.*)?$/);
+            if (!m) {
+                show("error: use format PORT/path or localhost:PORT/path");
+                return;
+            }
+            port = m[1];
+            path = m[2] || "/";
+            addr.value = "localhost:" + port + path;
+            view.textContent = "";
+            var tip = document.createElement("p");
+            tip.className = "load";
+            tip.textContent = "fetching localhost:" + port + path + "...";
+            view.append(tip);
+
+            kit.up({ port: port, path: path }, "fetch");
+        };
+
+        var show = function (msg) {
+            view.textContent = "";
+            var p = document.createElement("p");
+            p.className = "err";
+            p.textContent = msg;
+            view.append(p);
+            kit.say({}, "style");
+        };
+
+        var render = function (html) {
+            view.textContent = "";
+            if (!html || !html.trim()) {
+                show("empty response from port " + port);
+                return;
+            }
+            // render in sandboxed iframe
+            var f = document.createElement("iframe");
+            f.sandbox = "allow-same-origin";
+            f.srcdoc = html;
+            f.onload = function () {
+                // resize to content
+                try {
+                    var h = f.contentDocument.documentElement.scrollHeight;
+                    f.style.height = Math.max(h, 100) + "px";
+                } catch (e) {}
+                // intercept link clicks
+                try {
+                    f.contentDocument.addEventListener("click", function (eve) {
+                        var a = eve.target.closest("a");
+                        if (!a) return;
+                        var href = a.getAttribute("href");
+                        if (!href || href.startsWith("http")) return;
+                        eve.preventDefault();
+                        if (href.startsWith("/")) path = href;
+                        else path = path.replace(/[^\/]*$/, "") + href;
+                        addr.value = "localhost:" + port + path;
+                        load();
+                    });
+                } catch (e) {}
+                kit.say({}, "style");
+            };
+            view.append(f);
+            kit.say({}, "style");
+        };
+
+        // receive response from VM.srv.fetch
+        kit.ear("open", function (eve) {
+            var d = eve.detail || eve.data || {};
+            if (d.port && d.path) {
+                // initial command: set port and load
+                port = d.port;
+                path = d.path || "/";
+                addr.value = "localhost:" + port + path;
+                load();
+                return;
+            }
+            if (typeof d === "string") {
+                render(d);
+                return;
+            }
+            if (d.html) {
+                render(d.html);
+                return;
+            }
+            if (d.err) {
+                show(d.err);
+            }
+        });
+
+        document.getElementById("go").onclick = function () {
+            load();
+        };
+        document.getElementById("ref").onclick = function () {
+            load();
+        };
+        addr.onkeydown = function (e) {
+            if (e.key === "Enter") load();
+        };
+    })();
+</script>

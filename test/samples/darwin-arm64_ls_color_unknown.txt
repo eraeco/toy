@@ -1,0 +1,25 @@
+total 296
+drwxr-xr-x@ 24 mars  staff    768 Apr  6 14:29 [34m.[39;49m[0m
+drwx------@ 58 mars  staff   1856 Mar 27 17:19 [34m..[39;49m[0m
+-rw-r--r--@  1 mars  staff  10244 Apr  4 23:02 .DS_Store
+drwxr-xr-x@ 16 mars  staff    512 Apr  6 14:29 [34m.git[39;49m[0m
+drwxr-xr-x@  3 mars  staff     96 Mar 27 17:19 [34m.github[39;49m[0m
+-rw-r--r--@  1 mars  staff   2163 Apr  3 04:56 .gitignore
+drwxr-xr-x@  6 mars  staff    192 Mar 27 17:19 [34m+[39;49m[0m
+-rw-r--r--@  1 mars  staff     54 Apr  3 01:58 AGENTS.md
+-rw-r--r--@  1 mars  staff   1091 Apr  5 04:04 app.css
+-rw-r--r--@  1 mars  staff  16926 Apr  6 10:55 app.html
+-rw-r--r--@  1 mars  staff  21276 Apr  6 10:51 chat.html
+-rw-r--r--@  1 mars  staff     15 Apr  3 01:58 CLAUDE.md
+drwxr-xr-x@ 27 mars  staff    864 Apr  4 23:02 [34mcmd[39;49m[0m
+-rw-r--r--@  1 mars  staff     15 Mar 27 17:19 CNAME
+-rw-r--r--@  1 mars  staff   2660 Apr  3 02:57 contributing.md
+-rw-r--r--@  1 mars  staff     15 Apr  3 01:57 GEMINI.md
+drwxr-xr-x@  4 mars  staff    128 Apr  3 18:42 [34mgun[39;49m[0m
+-rw-r--r--@  1 mars  staff  29767 Mar 27 17:19 index.html
+-rw-r--r--@  1 mars  staff    320 Mar 27 17:19 manifest.json
+-rw-r--r--@  1 mars  staff     70 Mar 27 17:19 README.md
+-rw-r--r--@  1 mars  staff   9776 Apr  6 14:29 shell.html
+-rw-r--r--@  1 mars  staff    283 Mar 27 17:19 sw.js
+drwxr-xr-x@  5 mars  staff    160 Apr  6 14:29 [34mtest[39;49m[0m
+-rw-r--r--@  1 mars  staff   5905 Apr  5 18:00 util.js

@@ -1,24 +1,44 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="box" class="box">
-  <div class="bar">
-    <span class="tag"></span>
-    <span id="path" class="val"></span>
-  </div>
-</div>
-<style>
-body { display: block; min-height: 0; overflow: hidden; }
-.err .tag { color: var(--err); opacity: 1; }
-.err .val { color: var(--err); }
-</style>
+<span id="err" style="color: var(--err);"></span>
 <script src="../util.js"></script>
 <script>
 kit.ear('cd', function hear(eve) { hear.off();
-  return; // no need to do anything!
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
-  var text = s.slice(1).join('\n').trim() || s[0].replace(/^cd\s+/,'').trim() || '';
-  if(text.toLowerCase().includes('no such file') || text.toLowerCase().includes('not a directory')) {
-    box.tag('err', 1);
+  var raw = (eve.detail || eve.data || '').flat();
+  var lines = raw.trim().split('\n');
+  var out = lines.slice(1).join('\n').trim();
+  
+  var bad = out.toLowerCase().includes('no such file') || out.toLowerCase().includes('not a directory') || out.toLowerCase().includes('permission denied');
+  
+  if (localStorage.isRestoring === "1") {
+    localStorage.removeItem("isRestoring");
+    if (bad) {
+      localStorage.removeItem("cwd");
+      err.textContent = out;
+    }
+    return;
   }
-  B.all('#path')[0].textContent = text;
+
+  if(!bad){
+    var cmdLine = lines[0] || '';
+    var match = cmdLine.match(/cd\s+['"]?(.*?)['"]?\s*$/);
+    if(match){
+      var dir = match[1].trim();
+      var cwd = localStorage.cwd || '';
+      if(dir === '~' || dir === '') cwd = '';
+      else if(dir.charAt(0) === '/') cwd = dir;
+      else {
+        var parts = cwd.split('/').filter(Boolean);
+        var dirs = dir.split('/').filter(Boolean);
+        dirs.forEach(function(d){
+          if(d === '..') parts.pop();
+          else if(d !== '.') parts.push(d);
+        });
+        cwd = (cwd.startsWith('/') || dir.startsWith('/') ? '/' : '') + parts.join('/');
+      }
+      localStorage.cwd = cwd;
+    }
+    return;
+  }
+  err.textContent = out;
 });
 </script>

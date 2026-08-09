@@ -1,0 +1,9 @@
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mcode[39m ENOENT
+⠙[1G[0K[1mnpm[22m [31merror[39m [94msyscall[39m open
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mpath[39m /data/data/com.termux/files/home/package.json
+⠙[1G[0K[1mnpm[22m [31merror[39m [94merrno[39m [33m-2[39m
+⠙[1G[0K[1mnpm[22m [31merror[39m [94menoent[39m Could not read package.json: Error: ENOENT: no such file or directory, open '/data/data/com.termux/files/home/package.json'
+⠙[1G[0K[1mnpm[22m [31merror[39m [94menoent[39m This is related to npm not being able to find a file.
+[1mnpm[22m [31merror[39m [94menoent[39m
+⠙[1G[0K[1mnpm[22m [31merror[39m A complete log of this run can be found in: /data/data/com.termux/files/home/.npm/_logs/2026-04-06T19_33_00_106Z-debug-0.log
+⠙[1G[0K

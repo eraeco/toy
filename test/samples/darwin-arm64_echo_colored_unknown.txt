@@ -1,0 +1,1 @@
+\e[31mRed\e[0m \e[32mGreen\e[0m \e[34mBlue\e[0m

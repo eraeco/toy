@@ -1,0 +1,24 @@
+[H[J[?25l[H[JTasks: 26 total,   2 running,  24 sleeping,   0 stopped,   0 zombie
+  Mem:    15583M total,    14888M used,      694M free,        1M buffers
+ Swap:     7791M total,     7302M used,      488M free,     4662M cached
+800%cpu   0%user   0%nice   0%sys 800%idle   0%iow   0%irq   0%sirq   0%host
+[7m   PID USER         PR  NI VIRT  RES  SHR S[%CPU] %MEM     TIME+ ARGS           [0m
+[1m  4946 u0_a410      20   0  20G 369M  24M R 68.0   2.3  12:46.07 node /data/dat+[m
+[1m  5359 u0_a410      20   0  10G 4.7M 4.0M R  4.0   0.0   0:00.02 top[m
+  5295 u0_a410      20   0  11G  43M  28M S  0.0   0.2   0:00.38 node /data/dat+
+  5288 u0_a410      20   0  10G 4.1M 3.2M S  0.0   0.0   0:00.04 bash /data/dat+
+  3707 u0_a410      20   0  10G 4.7M 3.5M S  0.0   0.0   0:00.03 bash /data/dat+
+ 18679 u0_a410      20   0  10G 3.3M 3.1M S  0.0   0.0   0:00.59 bash /data/dat+
+ 24522 u0_a410      20   0  20G  11M 4.8M S  0.0   0.0   0:26.21 node /data/dat+
+ 24453 u0_a410      20   0  14G 3.6M 3.6M S  0.0   0.0   0:15.13 node /data/dat+
+ 20057 u0_a410      20   0  10G 2.2M 2.2M S  0.0   0.0   0:00.58 bash /data/dat+
+ 10397 u0_a410      20   0  11G  19M  11M S  0.0   0.1   0:14.71 node /data/dat+
+ 26181 u0_a410      20   0  10G 1.6M 1.6M S  0.0   0.0   0:00.98 bash /data/dat+
+ 13641 u0_a410      20   0  20G  13M 4.4M S  0.0   0.0   5:27.33 node /data/dat+
+ 13602 u0_a410      20   0  14G 3.0M 3.0M S  0.0   0.0   0:07.51 node /data/dat+
+ 27961 u0_a410      20   0  10G 1.7M 1.7M S  0.0   0.0   0:00.83 bash /data/dat+
+ 22025 u0_a410      20   0  11G  15M 8.7M S  0.0   0.0   0:18.58 node /data/dat+
+ 19637 u0_a410      20   0  10G 1.5M 1.5M S  0.0   0.0   0:02.78 bash /data/dat+
+ 18388 u0_a410      20   0  11G  16M 7.8M S  0.0   0.1   0:20.43 node http-serv+
+ 18373 u0_a410      20   0  11G 1.3M 1.3M S  0.0   0.0   0:04.55 node npm exec +
+ 19838 u0_a410      20   0  10G 1.1M 1.1M S  0.0   0.0   0:01.41 bash /data/dat+

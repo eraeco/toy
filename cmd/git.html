@@ -1,14 +1,10 @@
-<link rel="stylesheet" href="../gun/kit/web.css">
-<script src="../gun/kit/web.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/a11y-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/amark/monotype/monotype.js" integrity="sha384-3c6Vpd2P7HeANlkSl3fzNZzvzICdxV7UypVSY4oqoH927hRmgK7+7mDFLoQtw4Dc" crossorigin="anonymous"></script>
-<script src="../util.js"></script>
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+
+<div id="app" class="git-ui"></div>
 
 <style>
 :root { --yes: #34c759; --hot: #ff3b30; }
-body, html { margin: 0; padding: 0; min-height: 0; background: var(--mood, #000); color: var(--pop, #fff); font-family: 'Courier New', monospace; overflow: hidden; }
+iframe { width: 100%; }
 
 .git-ui { width: 100%; display: flex; flex-direction: column; }
 .file-row { display: flex; align-items: center; padding: 1em; border-bottom: 1px solid color-mix(in srgb, var(--pop) 15%, transparent); }
@@ -65,12 +61,86 @@ code { counter-reset: line; padding-bottom: 1em; }
 .char-del { background: rgba(255, 59, 48, 0.4); text-decoration: line-through; text-shadow: 0 0 5px #000; }
 .git-raw { padding: 1em; margin: 0; white-space: pre-wrap; word-break: break-all; }
 .git-note { padding: 2em; text-align: center; opacity: 0.5; }
+
+/* New UI styles */
+.ls {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  padding: 10px;
+  align-content: flex-start;
+}
+.ls a {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 4em;
+  max-width: 10em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.7em 0.6em;
+  text-align: center;
+  background: color-mix(in srgb, var(--pop) 8%, transparent);
+  border: 1px solid var(--pop);
+  border-radius: 0.6em;
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+}
+.ls a:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+}
+
+.config-ui { padding: 1em; color: var(--pop); }
+.config-list { margin-bottom: 2em; }
+.config-row { display: flex; align-items: center; margin-bottom: 0.5em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5em; }
+.config-key { flex: 0 0 12em; font-family: monospace; font-size: 0.9em; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; padding-right: 1em; }
+.config-val { flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--pop); font-family: inherit; padding: 4px 8px; border-radius: 4px; font-size: 0.9em; }
+.config-val:focus { border-color: var(--pop); outline: none; background: rgba(255,255,255,0.05); }
+.config-add { border-top: 1px dashed var(--pop); padding-top: 1em; display: flex; flex-direction: column; gap: 0.5em; }
+.config-add h3 { margin: 0 0 0.5em 0; font-size: 1.1em; }
+.config-add-row { display: flex; gap: 0.5em; }
+.btn-add { background: var(--yes); color: var(--mood); border: none; border-radius: 4px; padding: 4px 12px; font-weight: bold; cursor: pointer; }
 </style>
 
-<div id="app" class="git-ui"></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js" integrity="sha384-cQEZEagVXvxPpIzLzXzmQmKEf7awh3wIOawxi1PbDNoiidnNGFmhsbCgJaMP6f9F" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/a11y-dark.min.css" integrity="sha384-2QAAjX8pqaM5azX68KWI2wExF6Q13kY4kEiQFY4b/1zPe6rpgmTByNpDEllH3sb+" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" integrity="sha384-g4mRvs7AO0/Ol5LxcGyz4Doe21pVhGNnC3EQw5shw+z+aXDN86HqUdwXWO+Gz2zI" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/amark/monotype/monotype.js" integrity="sha384-3c6Vpd2P7HeANlkSl3fzNZzvzICdxV7UypVSY4oqoH927hRmgK7+7mDFLoQtw4Dc" crossorigin="anonymous"></script>
+<script src="../util.js"></script>
+<script src="git/config.js"></script>
 
 <script>
+kit.ear('git', function hear(eve) {
+  var s = eve.detail || eve.data || "", f = s.flat(), l = f.split('\n'), c = l[0]||'', cmd = (c.split(' ')[1]||'').trim(), i;
+
+    B.append(i = B.new('iframe'));
+    i.onload = function(e){
+        if(!i.readyState){ return i.remove() }
+        kit.say(f, cmd, i);
+    }; i.src = './git/'+cmd+'.html';
+
+});
+
 var app = document.getElementById('app');
+
+function gitFlat(s) {
+    s = (s||"").flat();
+    var arr = s.split('\n'), i=0, l, p, r, j;
+    for(; i<arr.length; i++){
+        if((l = arr[i]).indexOf('\r') === -1) continue;
+        p = l.split('\r'); r = p[0];
+        for(j=1; j<p.length; j++){
+            r = p[j] + r.slice(p[j].length);
+        }
+        arr[i] = r;
+    }
+    return arr.join('\n');
+}
 
 function wipe(node) {
     node.replaceChildren();
@@ -105,12 +175,39 @@ function makeRow(f, open) {
     return row;
 }
 
+function renderNoRepo(raw) {
+    wipe(app);
+    var div = make('div', 'ls');
+    
+    var btns = [
+        { label: 'clone', cmd: 'git clone https://github.com/', type: 'try' },
+        { label: 'init', cmd: 'git init', type: 'prompt' },
+        { label: 'config', cmd: 'git config --list', type: 'prompt' },
+        { label: 'help', cmd: 'git --help', type: 'prompt' }
+    ];
+    
+    btns.forEach(function(b) {
+        var a = make('a', '', b.label);
+        a.onclick = function() {
+            kit.say(b.cmd, b.type === 'try' ? 'prompt.try' : 'prompt');
+        };
+        div.appendChild(a);
+    });
+    
+    var pre = make('pre', 'git-raw');
+    pre.textContent = raw.trim();
+    app.appendChild(pre);
+
+    app.appendChild(div);
+}
+
 kit.ear('git', function hear(eve) {
+  return;
   var s = eve.detail || eve.data || "";
-  
-  // Use util.js shellReply to clean pager text, then .flat() to strip ANSI
+  // Use util.js shellReply to clean pager text, then gitFlat() to strip ANSI and handle \r
   var raw = window.shellReply && window.shellReply.clean ? window.shellReply.clean(s) : String(s);
-  raw = raw.flat().replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
+  var hasPrompt = /[\r\n]+.*(?:\$|#|>)\s*$/.test(raw);
+  raw = gitFlat(raw).replace(/[\r\n]+.*(?:\$|#|>)\s*$/, '');
   
   // The first line of the shell output contains the prompt and command executed
   var lines = raw.trim().split('\n');
@@ -118,6 +215,20 @@ kit.ear('git', function hear(eve) {
   var cmdMatch = cmdLine.match(/(?:\$|#|>|PS>)\s*(.*)$/);
   var fullCmd = cmdMatch ? cmdMatch[1] : cmdLine;
   
+  var isNoRepo = raw.indexOf('fatal: not a git repository') >= 0;
+  if (isNoRepo) {
+      renderNoRepo(raw);
+      hear.off();
+      return;
+  }
+  
+  var isConfig = fullCmd.indexOf(' config') >= 0;
+  if (isConfig && window.renderConfig) {
+      renderConfig(raw, app);
+      if(hasPrompt) hear.off();
+      return;
+  }
+
   var isDiff = fullCmd.indexOf(' diff') >= 0 || raw.indexOf('diff --git') >= 0;
   var isStatus = /git\s+status/.test(fullCmd) || raw.indexOf('Changes ') >= 0 || raw.indexOf('nothing to commit') >= 0 || raw.indexOf('Untracked files') >= 0;
 
@@ -132,7 +243,7 @@ kit.ear('git', function hear(eve) {
       // Non-status, non-diff git commands (git -v, git log, git branch, etc.)
       renderRaw(raw);
   }
-  hear.off();
+  if(hasPrompt) hear.off();
 });
 
 function parseStatus(raw) {
@@ -355,9 +466,13 @@ function renderRaw(raw) {
     // Skip the command echo line (first line with prompt)
     var output = lines.slice(1).join('\n').trim();
     if (!output) output = raw.trim();
-    var pre = make('pre', 'git-raw');
+    
+    var pre = app.querySelector('.git-raw');
+    if (!pre) {
+        pre = make('pre', 'git-raw');
+        app.replaceChildren(pre);
+    }
     pre.textContent = output;
-    app.replaceChildren(pre);
 }
 
 function renderStandaloneDiff(raw) {

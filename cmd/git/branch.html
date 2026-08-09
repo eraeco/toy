@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="../../gun/kit/web.css"><script src="../../gun/kit/web.js"></script>
+
+<style>
+:root {
+  --fill: var(--mood);
+  --mo-od: white;
+  --m0-0d: 100%,100%,100%;
+}
+</style>
+<script>
+kit.ear('branch', function hear(f){ hear.off(); f = f.detail || f.data || "";
+  var lines = f.trim().split('\n').slice(1);
+  lines.forEach(function(l){
+    if(!l.trim()){ return }
+    if(l.match(/(?:\$|#|>|PS>)\s*git/)){ return }
+    
+    var on = '*' == l[0];
+    var name = l;//.substring(1).trim();
+    if(name.indexOf('->') > -1){ return } // skip remote HEAD pointer
+    
+    var print = name;
+    print = print.replace('remotes/','').replace('origin/','');
+    
+    var go = name;
+    if(name.startsWith('remotes/')){
+      var parts = name.split('/');
+      if(parts.length >= 3) go = parts.slice(2).join('/');
+    }
+    
+    var a = document.new('a');
+    a.textContent = print;
+    if(on){ a.tag('active',1) }
+    
+    a.onclick = function(){
+      kit.say('git checkout ' + go, 'prompt');
+    };
+    document.body.append(a);
+  });
+});
+</script>
+<script src="../../util.js"></script>
+<link rel="stylesheet" href="../../app.css">

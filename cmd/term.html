@@ -1,0 +1,44 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" integrity="sha384-n2n7twoohnW+d3myBKaUgl7DSiwidw6MkQy9oesGzkPpMjejKRR3XlnD+5yCdtBD" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/lib/xterm.js" integrity="sha384-f/1U6Z9wM4D71a5eRXEZnyOTMOvjqxr2XLwh+Go1OvIl3L3tOcvUrzudnhbECwl4" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js" integrity="sha384-txoiwu4RR2GD3qySbaj+BbzibkLbSJRcfqGYMu6z1EqHil4A2dyBiBW5dlacG6OR" crossorigin="anonymous"></script>
+<script src="../gun/kit/web.js"></script>
+
+<div id="term" aria-label="Terminal"></div>
+
+<style>
+html, body { width: 100%; height: 100%; min-height: 0; overflow: hidden; background: var(--mood); }
+body { display: block; }
+#term { width: 100%; height: 100%; min-height: 16em; padding: 0.2em; }
+.xterm { height: 100%; touch-action: none; }
+</style>
+
+<script>
+;(function(tty){
+var css = getComputedStyle(document.documentElement);
+var fit = new FitAddon.FitAddon();
+var term = new Terminal({
+  cursorBlink: true,
+  convertEol: false,
+  scrollback: 2000,
+  fontFamily: css.getPropertyValue('--font') || 'monospace',
+  fontSize: 16,
+  theme: {
+    background: css.getPropertyValue('--mood').trim() || '#000000',
+    foreground: css.getPropertyValue('--pop').trim() || '#bf00ff',
+    cursor: css.getPropertyValue('--pop').trim() || '#bf00ff'
+  }
+});
+
+tty.fit = function(){
+  fit.fit();
+  kit.up({'#':1, size:{cols:term.cols, rows:term.rows}}, 'host');
+};
+
+term.loadAddon(fit);
+term.open(document.getElementById('term'));
+term.onData(function(data){ kit.up(data, 'host') });
+kit.ear('term', function(eve){ term.write(eve.detail || eve.data || '') });
+new ResizeObserver(tty.fit).observe(document.body);
+requestAnimationFrame(function(){ tty.fit(); term.focus() });
+}(window.tty = {}));
+</script>

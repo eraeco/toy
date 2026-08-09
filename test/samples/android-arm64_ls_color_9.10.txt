@@ -1,0 +1,12 @@
+total 257
+drwx------.  7 u0_a410 u0_a410   3452 Apr  4 15:00 [0m[01;34m.[0m
+drwx------. 20 u0_a410 u0_a410   3452 Apr  6 12:18 [01;34m..[0m
+-rw-------.  1 u0_a410 u0_a410 118620 Mar 16 10:30 .aethiop-v86-package.json
+-rw-------.  1 u0_a410 u0_a410   1364 Apr  4 00:50 .package-lock.json
+-rw-------.  1 u0_a410 u0_a410 105179 Apr  4 14:56 git.html
+-rw-------.  1 u0_a410 u0_a410   6640 Apr  4 14:57 git.js
+drwx------.  7 u0_a410 u0_a410   3452 Apr  4 00:58 [01;34mgtoy[0m
+drwx------.  3 u0_a410 u0_a410   3452 Apr  4 00:46 [01;34mnode-addon-api[0m
+drwx------. 11 u0_a410 u0_a410   3452 Apr  4 00:46 [01;34mnode-pty[0m
+drwx------.  8 u0_a410 u0_a410   3452 Apr  6 12:32 [01;34mtoy[0m
+drwx------.  3 u0_a410 u0_a410   3452 Apr  4 00:50 [01;34mws[0m

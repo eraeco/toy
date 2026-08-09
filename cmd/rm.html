@@ -1,26 +1,82 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<div id="box" class="box">
-  <div class="bar">
-    <span id="lbl" class="tag"></span>
-    <span id="fname" class="val"></span>
-  </div>
+
+<span id="err" style="color: var(--err);"></span>
+<div id="fix" style="display: none; padding: 10px;">
+    <div class="ls"><a id="btnFix"></a></div>
 </div>
+
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
-.err #lbl { color: var(--err); opacity: 1; }
-.err #fname { color: var(--err); }
+.ls {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  align-content: flex-start;
+}
+.ls a {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 4em;
+  padding: 0.7em 1.2em;
+  text-align: center;
+  background: color-mix(in srgb, var(--pop) 8%, transparent);
+  border: 1px solid var(--pop);
+  border-radius: 0.6em;
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  color: var(--pop);
+  text-decoration: none;
+}
+.ls a:active {
+  background: var(--pop);
+  color: var(--mood);
+  transform: scale(0.92);
+}
+#btnFix { border-color: var(--yes); color: var(--yes); }
 </style>
+
 <script src="../util.js"></script>
 <script>
 kit.ear('rm', function hear(eve) { hear.off();
-  return; // no need to do anything!
-  var s = (eve.detail || eve.data || '').flat().trim().split('\n');
-  var out = s.slice(1).join('\n').trim();
-  var name = s[0].replace(/^rm\s+(?:-[rRfi]+\s+)?/,'').trim();
-  if(out && out.toLowerCase().includes('no such file')) {
-    box.tag('err', 1);
-    B.all('#lbl')[0].textContent = 'not found';
+  var raw = (eve.detail || eve.data || '').flat();
+  var lines = raw.trim().split('\n');
+  var cmdLine = lines[0] || '';
+  var out = lines.slice(1).join('\n').trim();
+  
+  // Extract file name from command
+  var name = cmdLine.split(' ').slice(-1)[0];
+  if(name.startsWith('"') || name.startsWith("'")){ name = name.slice(1, -1) }
+
+  if(!out) { return } // Success - usually rm is silent
+
+  if(out.toLowerCase().includes('is a directory')) {
+    err.textContent = 'Failed to delete. Try:';
+    showFix('rm -rf ' + quoteArg(name));
+  } else if(out.toLowerCase().includes('no such file')) {
+    err.textContent = 'no such file';
+  } else if(out.toLowerCase().includes('permission denied')) {
+    err.textContent = 'Permission denied. Try:';
+    showFix('sudo rm ' + quoteArg(name));
+  } else {
+    err.textContent = 'Error: ' + out;
   }
-  B.all('#fname')[0].textContent = name;
 });
+
+function showFix(suggestion) {
+  fix.style.display = 'block';
+  btnFix.textContent = suggestion;
+  btnFix.onclick = function() {
+    kit.say(suggestion, 'prompt');
+  };
+  // Trigger parent resize
+  //setTimeout(() => { kit.up(null, 'style'); }, 50);
+}
+
+function quoteArg(val){
+  var safe = String(val).replace(/(["\\$`])/g, '\\$1');
+  if(val === safe){ return val }
+  return '"' + String(val).replace(/(["\\$`])/g, '\\$1') + '"';
+}
 </script>

@@ -1,454 +1,59 @@
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <link rel="manifest" href="./manifest.json">
+<script>navigator?.serviceWorker.register?.('./sw.js')</script>
 <link rel="stylesheet" href="./gun/kit/web.css"><script src="./gun/kit/web.js"></script>
-<form id="sign" onsubmit="cop.sign()">
+
+<form id="sign">
   <input id="host" name="host" placeholder="host:" class="fog sap lip">
   <input id="pass" name="pass" type="password" placeholder="pass:" class="fog sap lip">
   <button type="submit"></button>
 </form>
-<dialog id="vmDialog" class="fog sap lip" style="background: var(--mood, #000); color: var(--pop, lime); border: 1px solid var(--pop, lime); border-radius: 1em; padding: 2em; z-index: 1000;">
-  <p style="margin-top: 0; font-family: monospace;">Host failed to connect.</p>
-  <p style="font-family: monospace;">Do you want to boot a Linux VM in the browser?</p>
-  <div style="display: flex; justify-content: flex-end; gap: 1em; margin-top: 2em; font-family: monospace;">
-    <button onclick="vmDialog.close('no')" style="background: transparent; color: inherit; border: 1px solid var(--pop, lime); padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer;">No</button>
-    <button onclick="vmDialog.close('yes')" style="background: var(--pop, lime); color: var(--mood, #000); border: none; padding: 0.5em 1em; border-radius: 0.5em; cursor: pointer; font-weight: bold;">Yes</button>
-  </div>
-</dialog>
-<div id="vmBoot" style="display:none; position:fixed; bottom:4em; left:1em; right:1em; z-index:999; font-family:monospace; color:var(--pop, lime); font-size:0.8em; opacity:0.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+
 <style>
 :root { --fill: var(--mood); }
-body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; back-ground-image: url('https://picsum.photos/1200/900'); }
-body { display: flex; flex-direction: column; }
 #sign { flex-shrink: 0; }
 iframe { width: 100%; flex: 1; min-height: 0; height: 0 !important; border: none; display: block; }
 input::placeholder { opacity: 1; }
 </style>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(console.error);
-}
-</script>
+
+<script src="util.js"></script>
 <script>;(function(cop){
+
+location.hash = '';
 host.focus();
 console.off=1;
-cop.sign = async ()=>{ if(cop.ws){ return }
-  var opened = false;
+
+sign.onsubmit = cop.sign = async (eve)=>{ eve?.preventDefault?.(); if(cop.ws){ return }
+  
   cop.ws = new WebSocket((localStorage.host=host.value).replace(/^http/,'ws')||'ws://localhost:8022');
-  cop.ws.onopen = ()=>{
-    opened = true;
-    console.log('ws open');
-    cop.ws.send(localStorage.pass=pass.value);
 
-    location.path = 'chat.html';
+  cop.ws.onopen = ()=>{ cop.wait = 999;
+    cop.ws.send(localStorage.pass = (pass.value || localStorage.pass || ''));
+    while((cop.limbo||[]).length){ cop.ws.send(cop.limbo.shift()) }
+    location.path = 'shell.html';
   };
-
-  cop.ws.onmessage = (eve) => {
-    //console.log('app ws msg');//, eve.data);
-    kit.say(eve.data,'chat');
+  cop.ws.onmessage = (eve) => { kit.say(eve.data,'chat') };
+  cop.ws.onerror = (err) => { host.value = err.reason||'failed' };
+  cop.ws.onclose = (eve) => { cop.ws = 0;
+    if('cannot pass' === eve.reason){ localStorage.pass = ''; location.reload(); return }
+    setTimeout(() => { cop.wait = Math.min(cop.wait * 2, 30000); cop.sign() }, cop.wait = cop.wait || 999);
   };
-
-  cop.ws.onerror = (error) => {
-    console.error('ws err:', error);
-  };
-
-  cop.ws.onclose = (eve) => { cop.ws=0;
-    console.log('ws close:', eve.code, 'Reason:', eve.reason);
-    if(!opened) {
-      vmDialog.showModal();
-      vmDialog.onclose = function() {
-        if(vmDialog.returnValue === 'yes') {
-          bootVM();
-        }
-      };
-    } else {
-      cop.wait = cop.wait || 1000;
-      kit.say('Reconnecting...\n', 'chat');
-      setTimeout(() => {
-        cop.wait = Math.min(cop.wait * 2, 30000);
-        cop.sign();
-      }, cop.wait);
-    }
-  };
-  cop.ws.onopen = ((fn) => () => { cop.wait = 1000; fn(); })(cop.ws.onopen);
-}
-
-function bootVM() {
-  var VER = 's1', CDN = "https://cdn.jsdelivr.net/gh/abenezermario/v86-alpine@main";
-
-  var db = {};
-  db.save = (buf, cb) => {
-    var r = indexedDB.open('cop', 1);
-    r.onupgradeneeded = (e) => { e.target.result.createObjectStore('vm'); };
-    r.onsuccess = (e) => {
-      var tx = e.target.result.transaction('vm', 'readwrite');
-      tx.objectStore('vm').put(buf, VER);
-      tx.oncomplete = () => { cb && cb(); };
-    };
-    r.onerror = () => { cb && cb(); };
-  };
-  db.load = (cb) => {
-    var r = indexedDB.open('cop', 1);
-    r.onupgradeneeded = (e) => { e.target.result.createObjectStore('vm'); };
-    r.onsuccess = (e) => {
-      var tx = e.target.result.transaction('vm', 'readonly');
-      var req = tx.objectStore('vm').get(VER);
-      req.onsuccess = () => { cb(req.result || null); };
-      req.onerror = () => { cb(null); };
-    };
-    r.onerror = () => { cb(null); };
-  };
-
-  vmBoot.style.display = 'block';
-  vmBoot.textContent = 'Loading VM...';
-
-  var s = document.createElement('script');
-  s.src = CDN + "/build/libv86.js";
-  s.onload = () => {
-    db.load((state) => {
-      vmBoot.textContent = state ? 'Restoring VM...' : 'Downloading VM...';
-
-      var cfg = {
-        wasm_path: CDN + "/build/v86.wasm",
-        memory_size: 256 * 1024 * 1024,
-        vga_memory_size: 8 * 1024 * 1024,
-        bios: { url: CDN + "/bios/seabios.bin" },
-        vga_bios: { url: CDN + "/bios/vgabios.bin" },
-        filesystem: {
-            baseurl: CDN + "/images/alpine-rootfs-flat",
-            basefs: CDN + "/images/alpine-fs.json",
-        },
-        bzimage_initrd_from_filesystem: true,
-        cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci tsc=reliable mitigations=off random.trust_cpu=on console=ttyS0",
-        net_device: { type: "virtio", relay_url: "fetch" },
-        autostart: true,
-        disable_keyboard: true,
-        disable_mouse: true,
-      };
-      if (state) { cfg.initial_state = { buffer: state }; }
-
-      var emulator = window.emulator = new V86(cfg);
-      var emulatorReady = false;
-      var commandQueue = [];
-      var boot = state ? 3 : 0;
-
-      // Snapshot restore — set ready, wait for chat.html iframe to register
-      if (state) {
-        emulator.add_listener("emulator-ready", () => {
-          vmBoot.textContent = '';
-          vmBoot.style.display = 'none';
-          emulatorReady = true;
-          var flush = () => {
-            if (kit.views && kit.views.size > 0) {
-              while(commandQueue.length > 0) {
-                emulator.serial0_send(commandQueue.shift());
-              }
-            } else { requestAnimationFrame(flush); }
-          };
-          flush();
-        });
-      }
-
-    cop.ws = {
-        send: function(cmd) {
-            console.log("Sending to VM:", JSON.stringify(cmd));
-            // Ensure commands end with a newline so the shell processes them
-            if (cmd && !cmd.endsWith('\n') && !cmd.endsWith('\r')) {
-               cmd += '\n';
-            }
-            // Intercept commands that need network — route through browser fetch
-            var trimmed = (cmd || '').replace(/[\r\n]+$/, '').trim();
-            var m = trimmed.match(/^git\s+clone\s+(?:-b\s+(\S+)\s+)?(?:https?:\/\/)?github\.com\/([^\/\s]+)\/([^\s]+?)(?:\s+(\S+))?\s*$/);
-            if (m && emulatorReady) {
-                browserGitClone(m[2], m[3].replace(/\.git$/, ''), m[1] || '', m[4] || '');
-                return;
-            }
-            if (emulatorReady && pkg.run(trimmed, emulator)) return;
-            if (!emulatorReady) {
-               commandQueue.push(cmd);
-            } else {
-               emulator.serial0_send(cmd);
-            }
-        }
-    };
-    
-    while(preBootQueue.length > 0) {
-        cop.ws.send(preBootQueue.shift());
-    }
-    
-    var buf = "";
-    emulator.add_listener("serial0-output-byte", (byte) => {
-        var c = String.fromCharCode(byte);
-        buf += c;
-
-        if (boot < 3) {
-            // Show live boot logs in vmBoot div (outside chat — no parser impact)
-            var lines = buf.replace(/\x1b\[[^m]*m/g, '').split('\n');
-            var last = lines[lines.length - 1] || lines[lines.length - 2] || '';
-            if (last.trim()) vmBoot.textContent = last.trim().slice(0, 80);
-        }
-        if (boot === 0 && buf.includes("login:")) {
-            boot = 1;
-            emulator.serial0_send("root\n");
-            buf = "";
-            return;
-        }
-        if (boot === 1 && buf.includes("~#")) {
-            boot = 2;
-            emulator.serial0_send("export PS1='$ '\n");
-            buf = "";
-            return;
-        }
-        if (boot === 2 && /\n\$ /.test(buf)) {
-            vmBoot.textContent = '';
-            vmBoot.style.display = 'none';
-            boot = 3;
-            buf = "";
-            emulatorReady = true;
-            emulator.save_state().then((s) => { db.save(s); console.log('[snap] saved', s.byteLength, 'bytes'); });
-            while(commandQueue.length > 0) {
-                emulator.serial0_send(commandQueue.shift());
-            }
-            return;
-        }
-
-        if (window.serialTimeout) clearTimeout(window.serialTimeout);
-        window.serialTimeout = setTimeout(function() {
-            if (emulatorReady) {
-                // Strip terminal queries (DSR cursor-position) — meaningless for chat
-                var out = buf.replace(/\x1b\[6n/g, '');
-                if (out) {
-                    console.log("VM output:", JSON.stringify(out));
-                    kit.say(out, 'chat');
-                }
-            }
-            buf = "";
-        }, 50);
-    });
-
-    // Visual boot progress (vmBoot div — outside chat, no parser impact)
-    var dl = {};
-    emulator.add_listener("download-progress", (e) => {
-      if (!e.file_name || dl[e.file_name]) return;
-      dl[e.file_name] = 1;
-      var short = e.file_name.split('/').pop();
-      vmBoot.textContent = 'Loading ' + short;
-    });
-    emulator.add_listener("download-error", (e) => {
-      vmBoot.textContent = 'Error: ' + (e.file_name || e.message || e);
-      console.error("Download error:", e);
-    });
-
-    location.path = 'chat.html';
-    }); // db.load
-  };
-  document.head.appendChild(s);
-}
-
-// --- Browser-side git clone via GitHub REST API (CORS-safe) ---
-
-function ensureDir(emu, path) {
-    var parts = path.split('/').filter(Boolean);
-    var current = '';
-    for (var i = 0; i < parts.length; i++) {
-        current += '/' + parts[i];
-        var info = emu.fs9p.SearchPath(current);
-        if (info.id === -1) {
-            var parentPath = '/' + parts.slice(0, i).join('/');
-            if (!parentPath) parentPath = '/';
-            var parentInfo = emu.fs9p.SearchPath(parentPath);
-            if (parentInfo.id !== -1) {
-                emu.fs9p.CreateDirectory(parts[i], parentInfo.id);
-            }
-        }
-    }
-}
-
-async function browserGitClone(owner, repo, branch, dest) {
-    var emu = window.emulator;
-    dest = dest || '/root/' + repo;
-    if (dest.charAt(0) !== '/') dest = '/root/' + dest;
-
-    var say = function(msg) { kit.say(msg, 'chat'); };
-
-    say("Cloning into '" + (dest.split('/').pop()) + "'...\n");
-
-    try {
-        // Try the requested branch, then main, then master
-        var branches = branch ? [branch, 'main', 'master'] : ['main', 'master'];
-        var tree, usedBranch;
-        for (var bi = 0; bi < branches.length; bi++) {
-            var res = await fetch('https://api.github.com/repos/' + owner + '/' + repo + '/git/trees/' + branches[bi] + '?recursive=1');
-            if (res.ok) {
-                tree = await res.json();
-                usedBranch = branches[bi];
-                break;
-            }
-            if (res.status === 403) throw new Error('API rate limit exceeded (60/hr unauthenticated)');
-        }
-        if (!tree) throw new Error('repository \'' + owner + '/' + repo + '\' not found');
-        if (tree.truncated) say("warning: tree truncated (large repo), some files may be missing\n");
-
-        var files = tree.tree.filter(function(t) { return t.type === 'blob'; });
-        var dirs = tree.tree.filter(function(t) { return t.type === 'tree'; });
-        var total = files.length;
-
-        say("remote: Enumerating objects: " + tree.tree.length + ", done.\n");
-
-        // Create directory structure in 9P
-        ensureDir(emu, dest);
-        dirs.forEach(function(d) { ensureDir(emu, dest + '/' + d.path); });
-
-        // Download files in parallel batches of 8
-        var done = 0;
-        for (var i = 0; i < files.length; i += 8) {
-            var batch = files.slice(i, i + 8);
-            await Promise.all(batch.map(async function(f) {
-                var url = 'https://raw.githubusercontent.com/' + owner + '/' + repo + '/' + usedBranch + '/' + f.path;
-                var r = await fetch(url);
-                if (!r.ok) { say("warning: skipped " + f.path + " (" + r.status + ")\n"); return; }
-                var data = new Uint8Array(await r.arrayBuffer());
-                await emu.create_file(dest + '/' + f.path, data);
-                done++;
-                if (done % 25 === 0 || done === total) {
-                    say("\nReceiving objects: " + Math.round(done / total * 100) + "% (" + done + "/" + total + ")");
-                }
-            }));
-        }
-
-        say("\nReceiving objects: 100% (" + total + "/" + total + "), done.\n");
-        // Trigger a real ls in the VM so the shell prompt returns naturally
-        emu.serial0_send("ls " + dest + "\n");
-
-    } catch(e) {
-        say("fatal: " + e.message + "\n");
-        // Send empty command so shell prompt comes back
-        emu.serial0_send("\n");
-    }
-}
-
-// --- Browser-side package install via CORS-friendly CDN ---
-
-;(function(){
-var say = (msg) => { kit.say(msg, 'chat'); };
-
-var pkg = window.pkg = {};
-
-pkg.run = function(cmd, emu) {
-  var m;
-  if (m = cmd.match(/^npm\s+install\s+(.+)/)) { pkg.npm(m[1].trim().split(/\s+/), emu); return 1; }
-  if (m = cmd.match(/^apk\s+add\s+(.+)/)) { pkg.apk(m[1].trim().split(/\s+/), emu); return 1; }
 };
 
-// npm install — resolve via registry (CORS *), download files via jsdelivr
-pkg.got = {};
+localStorage.pass && cop.sign();
 
-pkg.one = async function(name, ver, emu, depth, base) {
-  if (pkg.got[name]) return;
-  pkg.got[name] = 1;
-
-  var pad = '  '.repeat(depth || 0);
-
-  // Resolve version via npm registry (supports 'latest' properly)
-  try {
-    var res = await fetch("https://registry.npmjs.org/" + name + "/latest");
-    if (!res.ok) res = await fetch("https://registry.npmjs.org/" + name);
-    if (!res.ok) { console.log('[pkg]', pad + 'skip', name); return; }
-    var meta = await res.json();
-    ver = meta.version || (meta['dist-tags'] || {}).latest;
-    if (!ver) { console.log('[pkg]', pad + 'skip', name, 'no ver'); return; }
-  } catch(e) { console.log('[pkg]', pad + 'err', name, e.message); return; }
-
-  console.log('[pkg]', pad + name + '@' + ver);
-  say(pad + "+ " + name + "@" + ver + "\n");
-
-  // Get file tree from jsdelivr (CORS *)
-  var tree = await fetch("https://data.jsdelivr.com/v1/packages/npm/" + name + "@" + ver);
-  if (!tree.ok) { console.log('[pkg]', pad + 'tree fail', name); return; }
-  var files = [];
-  var flat = (arr, pre) => {
-    (arr || []).forEach((f) => {
-      var p = pre + '/' + f.name;
-      if (f.type === 'directory') flat(f.files, p);
-      else files.push(p);
-    });
-  };
-  flat((await tree.json()).files, '');
-
-  var dest = base + '/node_modules/' + name;
-  ensureDir(emu, dest);
-
-  // Download files in batches of 12
-  for (var j = 0; j < files.length; j += 12) {
-    var batch = files.slice(j, j + 12);
-    await Promise.all(batch.map(async (f) => {
-      try {
-        var r = await fetch("https://cdn.jsdelivr.net/npm/" + name + "@" + ver + f);
-        if (!r.ok) return;
-        var data = new Uint8Array(await r.arrayBuffer());
-        var full = dest + f;
-        ensureDir(emu, full.slice(0, full.lastIndexOf('/')));
-        await emu.create_file(full, data);
-      } catch(e) {}
-    }));
-  }
-
-  // Recurse into deps
-  var deps = Object.keys(meta.dependencies || {});
-  for (var k = 0; k < deps.length; k++) {
-    await pkg.one(deps[k], 'latest', emu, (depth || 0) + 1, base);
-  }
-};
-
-pkg.npm = async function(names, emu) {
-  pkg.got = {};
-  var base = '/root';
-  var t = Date.now();
-  say("npm install " + names.join(' ') + "\n");
-
-  for (var i = 0; i < names.length; i++) {
-    var raw = names[i].replace(/^--.*/, '');
-    if (!raw) continue;
-    var at = raw.lastIndexOf('@');
-    var name = at > 0 ? raw.slice(0, at) : raw;
-    var ver = at > 0 ? raw.slice(at + 1) : 'latest';
-    try {
-      await pkg.one(name, ver, emu, 0, base);
-    } catch(e) {
-      say("ERR " + e.message + "\n");
-    }
-  }
-  var count = Object.keys(pkg.got).length;
-  var sec = ((Date.now() - t) / 1000).toFixed(1);
-  say("added " + count + " packages in " + sec + "s\n");
-  emu.serial0_send("echo done\n");
-};
-
-// apk add — needs a CORS mirror (future: abenezermario/apk repo)
-pkg.apk = async function(names, emu) {
-  say("apk add " + names.join(' ') + "\n");
-  say("note: runtime apk is not yet wired to a CORS mirror\n");
-  say("to add packages, edit cop-vm/Dockerfile and rebuild\n");
-  emu.serial0_send("\n");
-};
-
-}());
-
-(pass.value = localStorage.pass||'') && cop.sign();
-
-var preBootQueue = [];
-kit.ear('host',(eve)=>{
-  var cmd = eve.detail||eve.data;
-  if('string' != typeof cmd){ return }
-  if(!cop.ws){ 
-      preBootQueue.push(cmd);
-      return; 
-  }
-  cop.ws.send(cmd);
+kit.ear('host',(eve,cmd,no)=>{
+  if(no === (cmd = eve.detail||eve.data)){ return }
+  var msg = (typeof cmd === 'string') ? cmd : JSON.stringify(cmd);
+  if(!cop.ws){ (cop.limbo = cop.limbo||[]).push(msg); return }
+  cop.ws.send(msg);
 });
 
 }(window.cop = {}));
 </script>
+<script src="vm/boot.js"></script>
+<script src="vm/demo.js"></script>

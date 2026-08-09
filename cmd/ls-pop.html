@@ -1,0 +1,52 @@
+<link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
+
+<kit id="menu"><tin><belt><tray>
+  <b id="name"></b>
+  <button data-run="cp">cp</button>
+  <button data-run="rm">rm</button>
+  <button data-run="chmod">chmod</button>
+  <button data-run="tail">tail</button>
+  <button id="shut">×</button>
+</tray></belt></tin></kit>
+
+<style>
+body { display: block; }
+kit { display: none; position: relative; right: auto; bottom: auto; width: 100%; height: auto; overflow: hidden; pointer-events: auto; }
+kit.live { display: block; }
+kit::before { display: none; }
+</style>
+
+<script>
+;(function(pop){
+pop.hide = function(){
+  menu.classList.remove('live');
+  kit.up({height:'0px'}, 'style');
+};
+
+pop.show = function(eve, item){
+  item = eve.detail || eve.data || item || '';
+  if(!item){ return }
+  pop.item = item;
+  name.textContent = item;
+  menu.classList.add('live');
+  //requestAnimationFrame(function(){ kit.up(kit.size(), 'style') });
+  //try { navigator.vibrate && navigator.vibrate(18) } catch(e) {}
+};
+
+pop.quote = function(s){ return "'" + ('' + s).replace(/'/g, "'\\''") + "'" };
+
+pop.run = function(eve, run, cmd){
+  run = (eve.target.closest('button') || '').dataset;
+  run = (run || {}).run;
+  if(!run || !pop.item){ return }
+  cmd = run + ' ' + pop.quote(pop.item);
+  if('cp' === run){ cmd += ' ' }
+  pop.hide();
+  kit.say(cmd, 'tail' === run ? 'prompt' : 'prompt.try');
+};
+
+kit.ear('ls.pop', pop.show);
+menu.addEventListener('click', pop.run);
+shut.addEventListener('click', pop.hide);
+}(window.pop = {}));
+</script>

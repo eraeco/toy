@@ -1,272 +1,133 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
 
-<div id="list" class="ls">
-
+<div class="wade">
+<list id="list">
+  <a id="up">../</a>
+  <a id="add">+</a>
+</list>
 </div>
 
-<dialog id="actionDialog" class="ls-action-dialog">
-  <p class="ls-action-head dim fog"><span id="dialogTargetFile"></span></p>
-  <div class="ls-action-grid">
-    <button id="btnTail" class="ls-act dim lip fog sap">tail</button> 
-    <button id="btnCh" class="ls-act dim lip fog sap">chmod</button>
-    <button id="btnCp" class="ls-act dim lip fog sap">copy</button>
+<fit>
+  <a></a>
+</fit>
 
-    <button id="btnRm" class="ls-act dim lip fog sap ls-act-hot">remove</button>
-    
-  </div>
-</dialog>
+<iframe id="pop" src="./ls-pop.html"></iframe>
 
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
-.ls {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2em;
-  padding: 10px;
-  align-content: flex-start;
-}
-.ls a {
-  display: block;
-  flex: 0 0 auto;
-  min-width: 4em;
-  max-width: 10em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 0.7em 0.6em;
+#pop { display: block; width: 100%; height: 0; position: absolute; top: 33%; }
+.ls, list {
   text-align: center;
-  background: color-mix(in srgb, var(--pop) 8%, transparent);
+  display: block;
+  scroll-padding-left: 50%;
+  scroll-padding-right: 50%;
+  width: 100%;
+  max-height: max(90vh, 26em);
+  max-height: 26em;
+  column-width: 8em;
+  column-gap: 0.01em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 0.2em; /* undo item bleed */
+}
+.ls a, list a, list tap {
   border: 1px solid var(--pop);
   border-radius: 0.6em;
-  font-family: 'Courier New', monospace;
-  font-weight: 900;
+  background: transparent;
+  padding: 0.7em 0.6em;
+  min-width: 3em;
+  max-width: 9em;
+  text-align: center;
   cursor: pointer;
+  margin: 0 0.1em 0.2em 0.1em;
+  
+  font-weight: bold;
   user-select: none;
+  display: inline-block;
+  flex: 0 0 auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  line-height: 0.9em;
+  back-ground: color-mix(in srgb, var(--pop) 8%, transparent);
+  font-fam-ily: 'Courier New', monospace;
 }
-.ls a:active {
+.ls a:hover, .ls a:active, list a:hover, list a:active {
   background: var(--pop);
   color: var(--mood);
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
-.header-cmd {
-  display: block; width: 100%;
-  color: var(--pop);
-  font-weight: 900;
-  font-size: 1.2em;
-  margin-bottom: 0.6em;
-  font-family: 'Courier New', monospace;
-  border-bottom: 1px dashed var(--pop);
-  padding-bottom: 0.3em;
-}
-.ls-action-dialog {
-  color: var(--pop);
-  z-index: 1000;
-  font-family: monospace;
-  position: fixed;
-  margin: 0;
-  inset: auto 0 auto 0;
-  width: 100vw;
-  max-width: 100vw;
-  height: auto;
-  overflow: auto;
-}
-.ls-action-head { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ls-action-grid { display: block; float: right; gap: 0.45em; width: 100%; }
-.ls-act { background: rgba(0,0,0,0.8); float: right; cursor: pointer; text-align: center; font: inherit; }
-.ls-act:active { background: color-mix(in srgb, var(--pop) 15%, transparent); }
-.ls-act-hot { color: var(--err); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
 </style>
 <script src="../util.js"></script>
 <script>
-
-
-kit.ear('ls',function hear(eve){
-
+kit.ear('ls',function hear(eve){ hear.off();
   CMD.ls(eve.detail || eve.data, list);
-  hear.off();
 });
   
-// ls.html is always the first cmd loaded (auto-fired by chat.html),
-// so it registers all belt shortcuts for cmd/*.html handlers.
-kit.say(['ls','ls .'], 'belt');
-//kit.say(['cat','cat '], 'belt');
-//kit.say(['cd','cd '], 'belt');
-kit.say(['pwd','pwd'], 'belt');
-kit.say(['whoami','whoami'], 'belt');
-kit.say(['ps','ps aux'], 'belt');
-kit.say(['ping','ping '], 'belt');
-kit.say(['grep','grep '], 'belt');
-kit.say(['echo','echo '], 'belt');
-kit.say(['mkdir','mkdir '], 'belt');
-kit.say(['touch','touch '], 'belt');
-//kit.say(['cp','cp '], 'belt');
-//kit.say(['mv','mv '], 'belt');
-//kit.say(['rm','rm '], 'belt');
-kit.say(['clear','clear'], 'belt');
-kit.say(['npm','npm '], 'belt');
-kit.say(['git','git status'], 'belt');
-kit.say(['claude','claude '], 'belt');
-kit.say(['codex','codex '], 'belt');
-
+// shell.html progressively enhances with ls.html
+// which then progressively enhances all the cmd/*.html
+kit.say([['ls','ls .'],['git','git status'],['npm','npm '],['kill','kill '],['clear','clear']], 'belt');
+kit.say([['claude','claude '],['codex','codex '],['gemini','gemini '],['grok','grok ']], 'belt');
 
 CMD = {};
-CMD.ls = function(s,v,f,cmd){ 
-  v.tag('ls',+1).textContent = '';
+CMD.ls = function(s,v,f,cmd){
   cmd = (s=s.flat()).cut('\n',ESC); s = cmd[2]; cmd = cmd[0];
+  CMD.base(cmd);
   
-
-
-  f = (s.indexOf('\t')+1)? '\t' : /\s+/;
   s = s.replaceAll('\r\n','\t').replaceAll('\r','\t').replaceAll('\n','\t').replaceAll(/\s{2,}/g,'\t');
-
-  var isBack = B.new('a');
-  isBack.textContent = '..';
-  isBack.dataset.val = '..';
-  v.append(isBack);
-
-  (s = s.split(f)).forEach((item,a)=>{
-    if(!(item = item.flat().trim())){ return }
-    if(item === '..') return;
-    
-    (a = B.new('a')).dataset.val = item;
-    
-    // Simple heuristic for file vs folder: folders usually don't have extensions, files do.
-    // Also hidden files start with .
-    var isFile = (item.includes('.') && item !== '.' && item !== '..');
-    fold = '' ;
-    if(!isFile) { fold = '/' } 
-    // For pure UI, let's just make it look cool based on this guess
-    
-    a.dataset.kind = isFile? 'file' : 'folder';
-    a.textContent = item + fold;
-    v.append(a);
-  });
+  f = (s.indexOf('\t')+1)? '\t' : /\s+/;
+  s = s.split(f).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
   
-  CMD.ls.on = CMD.ls.on || (function(){ 
-    var longPressTimer;
+  s.forEach((item,a)=>{
+    if(!(item = item.flat().trim())){ return }
+    (a = B.new('fit a')).where = item;
+    a.file = (item.includes('.') && item !== '.' && item !== '..');
+    a.textContent = item + (a.file? '' : '/');
+    add.pin(a,-1);
+  });
 
-    B.ear('pointerdown',(eve, el)=>{ el = eve.target;
-      var a = el.closest('a');
-      if(!a) return;
-      if(!a.closest('.ls')) return;
-      
-      var val = a.dataset.val;
-      if(val === '..') return; // Don't long press '..'
+  v.scrollLeft = (v.scrollWidth - v.clientWidth) / 2;
+};
 
-      longPressTimer = setTimeout(function() {
-          eve.preventDefault();
-          eve.stopPropagation();
-          showActionDialog(a, val);
-      }, 500); // 500ms long press
+CMD.path = '~';
+CMD.base = function(cmd, hit){
+  hit = cmd.match(/\bcd\s+(.+?)\s+&&\s+ls\b/);
+  if(hit){ CMD.path = hit[1].replace(/\\(.)/g, '$1') }
+};
+CMD.go = function(item, part, out){
+  part = (CMD.path + '/' + item).split('/');
+  out = [];
+  part.forEach(function(v){
+    if(!v || '.' === v){ return }
+    if('..' === v){ if(out.length > 1){ out.pop() } return }
+    out.push(v);
+  });
+  return out.join('/') || '~';
+};
+CMD.arg = function(path){ return path.replace(/[^\w@%+=:,./~-]/g, '\\$&') };
+up.where = '..';
 
-    });
+B.ear('contextmenu', function(eve, a){ a = eve.target.closest('list a');
+  if(!a || !a.where){ return }
+  eve.preventDefault();
+  kit.say(a.where, 'ls.pop', pop);
+});
 
-    B.ear('pointerup',(eve, el)=>{
-      clearTimeout(longPressTimer);
-    });
+B.ear('click',(eve, a, path, cmd)=>{ a = eve.target.closest('a');
+  if(!a || !a.closest('list')){ return }
+  if(!a.where){ return }
+  if(a.file){
+    kit.say('cat '+a.where, 'prompt.set');
+    kit.say('cat '+a.where, 'prompt');
+    return;
+  }
+  path = CMD.go(a.where);
+  cmd = 'cd '+CMD.arg(path)+' && ls .';
+  kit.say(localStorage.pwd = cmd, 'prompt.set');
+  kit.say({run:cmd, cmd:'ls .', bin:'ls'}, 'prompt.same');
+});
 
-    B.ear('pointermove',(eve, el)=>{
-      clearTimeout(longPressTimer);
-    });
-    
-    B.ear('contextmenu', (eve, el) => {
-      el = eve.target;
-      var a = el.closest('a');
-      if(!a) return;
-      if(!a.closest('.ls')) return;
-      
-      var val = a.dataset.val;
-      if(val === '..') return;
-
-      eve.preventDefault();
-      clearTimeout(longPressTimer);
-      showActionDialog(a, val);
-    });
-
-    B.ear('click',(eve, el)=>{ el = eve.target;
-      var a = el.closest('a');
-      if(!a) return;
-      if(!a.closest('.ls')) return;
-      
-      var val = a.dataset.val;
-      // If dialog is open, ignore normal clicks
-	      if(actionDialog.open) {
-	          eve.preventDefault();
-	          return;
-	      }
-	      
-	      if(val.includes('.') && val !== '..') {
-	        kit.say('cat ' + quoteArg(val), 'prompt');
-	      } else {
-	        if(val === '..') {
-	          kit.say('cd ..', 'prompt');
-	          kit.say('ls .', 'prompt');
-	        } else {
-	          kit.say('cd ' + quoteArg(val), 'prompt');
-	          kit.say('ls .', 'prompt');
-	        }
-	      }
-	    })
-
-    function quoteArg(val) {
-        return '"' + String(val).replace(/(["\\$`])/g, '\\$1') + '"';
-    }
-
-    function placeActionDialog(anchor) {
-        var rect = anchor.getBoundingClientRect();
-        var pad = 12;
-        var roomDown = window.innerHeight - rect.bottom - pad;
-        var roomUp = rect.top - pad;
-        var useUp = roomDown < 180 && roomUp > roomDown;
-        actionDialog.style.left = '0px';
-        actionDialog.style.right = '0px';
-        actionDialog.style.width = window.innerWidth + 'px';
-        actionDialog.style.maxWidth = window.innerWidth + 'px';
-        if(useUp) {
-          actionDialog.style.top = 'auto';
-          actionDialog.style.bottom = Math.max(pad, window.innerHeight - rect.top) + 'px';
-          actionDialog.style.maxHeight = Math.max(120, roomUp) + 'px';
-        } else {
-          actionDialog.style.top = Math.max(pad, rect.bottom) + 'px';
-          actionDialog.style.bottom = 'auto';
-          actionDialog.style.maxHeight = Math.max(120, roomDown) + 'px';
-        }
-    }
-
-    function showActionDialog(anchor, val) {
-        var kind = anchor.dataset.kind || 'file';
-        var q = quoteArg(val);
-        dialogTargetFile.textContent = val + (kind === 'folder' ? '/' : '');
-        placeActionDialog(anchor);
-        
-        
-        btnCp.onclick = function() {
-            var dst = prompt('Copy to where?', val);
-            if(dst) {
-              kit.say('cp ' + q + ' ' + quoteArg(dst), 'prompt');
-            }
-            actionDialog.close();
-        };
-        
-        btnRm.onclick = function() {
-            kit.say((kind === 'folder' ? 'rm -r ' : 'rm ') + q, 'prompt');
-            actionDialog.close();
-        };
-
-        if(actionDialog.open) {
-          actionDialog.close();
-        }
-        actionDialog.show();
-    }
-
-    B.ear('pointerdown', function(eve){
-      if(!actionDialog.open) { return }
-      if(eve.target.closest('#actionDialog')) { return }
-      actionDialog.close();
-    });
-
-    
-  }())||1;
-}
+(async function(){ return;
+  kit.say('ls .\nasdf\tqwertyuiop\thjkl\tzxcvbnmtyrueiwoqp1\tbnvm', 'ls');
+}());
 </script>

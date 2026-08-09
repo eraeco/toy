@@ -4,175 +4,147 @@
 <div class="box">
   <div class="bar">
     <span class="tag">codex</span>
-    <span id="hd" class="val"></span>
+    <span id="lab" class="val"></span>
+    <button id="ins" type="button" class="mini hide">install</button>
+    <button id="stop" class="mini" type="button">stop</button>
   </div>
   <div id="bod" class="bod"></div>
+  <form id="ask">
+    <textarea id="say" aria-label="Codex prompt" placeholder="Ask Codex" rows="2"></textarea>
+    <button type="submit">send</button>
+  </form>
 </div>
 
-<!-- templates -->
 <div class="model">
-  <pre class="tpl txt blk"></pre>
-  <div class="tpl thk"><p class="tog">&#9654; thinking</p><pre class="inn blk"></pre></div>
-  <div class="tpl tol"><p class="top"></p><pre class="tou blk"></pre></div>
+  <pre class="tpl msg blk"></pre>
+  <pre class="tpl usr blk"></pre>
   <pre class="tpl fail blk"></pre>
 </div>
 
 <style>
 body { display: block; min-height: 0; overflow: hidden; }
+.box { display: flex; flex-direction: column; min-height: 0; }
+.bar { display: flex; align-items: center; gap: 0.5em; padding: 0.4em 0.8em; border-bottom: 1px solid var(--pop); flex-shrink: 0; }
+.val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
 .bod { padding: 0.6em; display: block; }
 .bod > * { display: block; margin-bottom: 0.6em; }
-.blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.85em; text-align: left; }
-.thk { border-left: 2px solid var(--pop); padding-left: 0.6em; opacity: 0.55; display: block; }
-.thk .inn { display: none; }
-.thk.open .inn { display: block; }
-.tog { font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; user-select: none; display: block; }
-.tol { border: 1px solid var(--pop); border-radius: 0.4em; overflow: hidden; display: block; }
-.top { padding: 0.3em 0.6em; font-size: 0.8em; opacity: 0.7; cursor: pointer; margin: 0; display: block; }
-.tou { padding: 0.5em 0.6em; display: none; opacity: 0.8; font-size: 0.9em; }
-.tol.open .tou { display: block; }
+#ask { display: flex; align-items: stretch; gap: 0.4em; padding: 0.6em; border-top: 1px solid var(--pop); }
+#say { flex: 1; min-width: 0; min-height: 3em; resize: vertical; color: inherit; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.55em; }
+.blk { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'Courier New', monospace; font-size: 0.88em; text-align: left; }
+.usr { opacity: 0.6; border-top: 1px solid color-mix(in srgb, var(--pop) 30%, transparent); padding-top: 0.45em; }
 .fail { color: var(--err); }
-.usr { opacity: 0.6; border-bottom: 1px solid var(--pop); padding-bottom: 0.3em; margin-bottom: 0.3em; display: block; }
+button { color: inherit; background: transparent; border: 1px solid var(--pop); border-radius: 0.45em; padding: 0.45em 0.7em; font: inherit; font-weight: 900; touch-action: manipulation; }
+.mini { min-width: 3.8em; font-size: 0.78em; opacity: 0.7; }
+.hide { display: none; }
 </style>
 
 <script src="../util.js"></script>
 <script>;(function(){
 
-var hd  = B.all('#hd')[0];
 var bod = B.all('#bod')[0];
-
+var lab = B.all('#lab')[0];
+var ins = B.all('#ins')[0];
+var stop = B.all('#stop')[0];
+var ask = B.all('#ask')[0];
+var say = B.all('#say')[0];
 var CDX = {};
-CDX.tid = null;
-CDX.on  = 0;
-CDX.textEl = null;
-CDX.thinkEl = null;
 
-CDX.send = function(txt){
-  if(CDX.on){ return }
-  CDX.on = 1;
-  CDX.textEl = null; CDX.thinkEl = null;
-  var msg = {type: 'codex', prompt: txt};
-  if(CDX.tid){ msg.thread = CDX.tid }
-  if(CDX.cwd){ msg.cwd = CDX.cwd }
-  kit.up(msg, 'host');
-};
+CDX.job = job();
+CDX.tid = '';
+CDX.on = 0;
+CDX.out = null;
 
-CDX.got = function(m){
-  if(m.type === 'codex-event'){ CDX.evt(m.data); return }
-  if(m.type === 'codex-done'){
-    CDX.on = 0;
-    if(m.threadId){ CDX.tid = m.threadId }
-    kit.up(CDX.tid, 'codex-session');
-    kit.say({}, 'style');
-  }
-};
-
-CDX.evt = function(ev){
-  var t = ev.type || '';
-  var p = ev.params || {};
-
-  if(t === 'thread-init'){ CDX.tid = ev.threadId; return }
-
-  if(t === 'item/agentMessage/delta'){
-    if(!CDX.textEl){
-      CDX.textEl = B.all('.tpl.txt')[0].cloneNode(true);
-      CDX.textEl.classList.remove('tpl'); CDX.textEl.textContent = '';
-      CDX.textEl._buf = '';
-      bod.append(CDX.textEl);
-    }
-    CDX.textEl._buf += (p.delta || '');
-    CDX.textEl.textContent = CDX.textEl._buf;
-    kit.say({}, 'style');
-    return;
-  }
-
-  if(t === 'item/reasoning/textDelta' || t === 'codex/event/reasoning_content_delta'){
-    if(!CDX.thinkEl){
-      CDX.thinkEl = B.all('.tpl.thk')[0].cloneNode(true);
-      CDX.thinkEl.classList.remove('tpl');
-      CDX.thinkEl.querySelector('.tog').onclick = function(){ CDX.thinkEl.classList.toggle('open') };
-      CDX.thinkEl._buf = '';
-      bod.append(CDX.thinkEl);
-    }
-    CDX.thinkEl._buf += (p.delta || p.text || '');
-    CDX.thinkEl.querySelector('.inn').textContent = CDX.thinkEl._buf;
-    kit.say({}, 'style');
-    return;
-  }
-
-  if(t === 'item/started'){
-    var item = p.item || {};
-    if(item.type === 'commandExecution' || item.type === 'fileChange'){
-      var name = item.type === 'commandExecution' ? (item.command || 'exec') : (item.path || 'file');
-      CDX.toolEl = CDX.mkTool(name);
-      CDX.toolEl._buf = '';
-    }
-    if(item.type === 'agentMessage'){ CDX.textEl = null }
-    return;
-  }
-
-  if(t === 'item/commandExecution/outputDelta' || t === 'item/fileChange/outputDelta'){
-    if(!CDX.toolEl){ CDX.toolEl = CDX.mkTool('exec'); CDX.toolEl._buf = '' }
-    CDX.toolEl._buf += (p.delta || '');
-    CDX.toolEl.querySelector('.tou').textContent = CDX.toolEl._buf;
-    kit.say({}, 'style');
-    return;
-  }
-
-  if(t === 'item/completed'){
-    CDX.textEl = null; CDX.thinkEl = null; CDX.toolEl = null;
-    return;
-  }
-  if(t === 'error'){ CDX.fail(p.message || p.text || JSON.stringify(p)); return }
-};
-
-CDX.toolEl = null;
-
-CDX.mkTool = function(name){
-  var v = B.all('.tpl.tol')[0].cloneNode(true);
+CDX.add = function(cls, text){
+  var v = B.all('.tpl.' + cls)[0].cloneNode(true);
   v.classList.remove('tpl');
-  v.classList.add('open');
-  var top = v.querySelector('.top');
-  top.textContent = name + ' \u25BC';
-  top.onclick = function(){
-    v.classList.toggle('open');
-    top.textContent = name + (v.classList.contains('open') ? ' \u25BC' : ' \u25B6');
-  };
+  v.textContent = text || '';
   bod.append(v);
   kit.say({}, 'style');
   return v;
 };
 
-CDX.fail = function(t){
-  var v = B.all('.tpl.fail')[0].cloneNode(true);
-  v.classList.remove('tpl'); v.textContent = t;
-  bod.append(v); kit.say({}, 'style');
+CDX.user = function(text){
+  CDX.add('usr', '> ' + text);
 };
 
-// receive prompt from chat.html
+CDX.say = function(text){
+  if(!CDX.out){ CDX.out = CDX.add('msg', '') }
+  CDX.out.textContent += text || '';
+  kit.say({}, 'style');
+};
+
+CDX.send = function(text, act){
+  var msg = {'^': './cmd/codex.js', '#': CDX.job || '1'};
+  if(text){ msg.$ = text }
+  if(act){ msg.act = act }
+  if(CDX.tid){ msg.thread = CDX.tid }
+  if(localStorage.cwd){ msg.cwd = localStorage.cwd }
+  CDX.on = 1;
+  kit.up(msg, 'host');
+};
+
+CDX.done = function(){
+  CDX.on = 0;
+  say.focus();
+  kit.say({}, 'style');
+};
+
+CDX.got = function(obj){
+  if(obj.thread){ CDX.tid = obj.thread; lab.textContent = CDX.tid.slice(0, 8) }
+  if(obj.need === 'codex'){ ins.classList.remove('hide') }
+  if(obj.$){ CDX.say(obj.$) }
+  if(obj.done){
+    if(CDX.tid){ kit.up(CDX.tid, 'codex-session') }
+    CDX.done();
+  }
+};
+
+CDX.first = function(d){
+  var raw = typeof d === 'string' ? d : (d.raw || d.$ || d.prompt || '');
+  raw = raw.cmd();
+  var m = raw.match(/^codex(?:\s+--resume\s+(\S+))?\s*([\s\S]*)$/i);
+  var text = m ? (m[2] || '') : raw;
+  var s = (typeof d === 'object' && d.session) || null;
+  CDX.job = (typeof d === 'object' && d['#']) ? d['#'] : (CDX.job || '1');
+  if(m && m[1]){ CDX.tid = m[1]; lab.textContent = CDX.tid.slice(0, 8) }
+  else if(s){ CDX.tid = s; lab.textContent = s.slice(0, 8) } // shell remembers the thread — bash prompts continue it
+  text = text.trim();
+  if(!text){ lab.textContent = 'ready'; say.focus(); kit.say({}, 'style'); return }
+  CDX.user(text);
+  CDX.send(text);
+};
+
 kit.ear('codex', function(eve){
   var d = eve.detail || eve.data || {};
-
-  // response from server routed by chat.html
-  if(d.type && d.type.indexOf('codex') === 0){ CDX.got(d); return }
-
-  // prompt from chat.html
-  var raw = typeof d === 'string' ? d : (d.prompt || '');
-  var tid = typeof d === 'object' ? (d.thread || null) : null;
-  var cwd = typeof d === 'object' ? (d.cwd || '') : '';
-  var txt = raw.replace(/^codex\s*/i, '').trim();
-  if(!txt){ return }
-  if(cwd){ CDX.cwd = cwd }
-
-  if(CDX.tid){
-    var u = B.new('pre');
-    u.className = 'usr blk';
-    u.textContent = '> ' + txt;
-    bod.append(u);
-  }
-
-  hd.textContent = txt;
-  if(tid){ CDX.tid = tid }
-  CDX.send(txt);
+  if(d.type === 'codex' || d['^']){ CDX.got(d); return }
+  CDX.first(d);
 });
+
+ins.onclick = function(){
+  ins.classList.add('hide');
+  CDX.out = null;
+  CDX.send('', 'install');
+};
+
+stop.onclick = function(){
+  CDX.send('', 'stop');
+  CDX.done();
+};
+
+ask.onsubmit = function(eve, text){
+  eve.preventDefault();
+  text = say.value.trim();
+  if(!text || CDX.on){ return }
+  say.value = '';
+  CDX.out = null;
+  CDX.user(text);
+  CDX.send(text);
+};
+
+say.onkeydown = function(eve){
+  if('Enter' !== eve.key || eve.shiftKey){ return }
+  eve.preventDefault();
+  ask.requestSubmit();
+};
 
 }());</script>

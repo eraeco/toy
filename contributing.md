@@ -8,62 +8,45 @@ ideally stick to ES5 syntax except please use await (async) and arrow functions.
 
 always focus on performance & minimalism. Benchmark everything. Use progressive enhancement over graceful degradation. Keep everything modular and loosely coupled, even in the same file, using immediately invoked functions to indicate separate modules. Prefer passing contexts objects around that get mutated over having many parameters for functions. 
 
-always choose code that looks like this:
+always do code that looks more like this:
 ```
 var PDF = {};
 
 PDF.read = function(path){
-
 	readFromDisk(path, PDF.split);
-
 }
 
 PDF.split = function(file){
-
 	splitIntoPages(file).forEach(PDF.save);
-
 }
 
 PDF.save = function(page, number){
-
 	saveToFolder('page' + number, page, PDF.done);
-
 }
 
 PDF.done = function(err, done){
-
 	console.log("Done! If no", err);
-
 }
 
 PDFs.forEach(PDF.read); 
 ```
-over code that may look like this:
+and avoid doing code that look like this:
 ```
 // ugly
-
 for(var i = 0; i < PDFs.length; i += 1){
-
 	var fileName = PDFs[i];
-
 	readFromDisk(filename, function(file){
-
 		var pages = splitIntoPages(file);
-
 		for(var j = 0; j < pages.length; j += 1){
-
 			var page = pages[j];
-
 			saveToFolder('page' + j, page, function(err, done){
-
 				console.log("Done! If no," err);
-
 			});
-
 		}
-
 	});
-
 }
 ```
 
+All design must be fat thumb friendly, responsive for phones (without needing to use CSS media query breakpoints) foremost, and be easy to operate by elderly, toddler, disabled, and/or one-handed while someone is driving a dodgem bumper car with minimal screen attention glancing.
+
+See README.md

@@ -1,42 +1,141 @@
 <link rel="stylesheet" href="../gun/kit/web.css"><script src="../gun/kit/web.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/monokai.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/base16/monokai.min.css" integrity="sha384-BE3noMW4ZTKQcykTUouJ48EuS/focGTzVUXJe8WXZKTVEKz5/Qw3+5qKynxc48Ch" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js" integrity="sha384-g4mRvs7AO0/Ol5LxcGyz4Doe21pVhGNnC3EQw5shw+z+aXDN86HqUdwXWO+Gz2zI" crossorigin="anonymous"></script>
+
+<pre id="code"><code id="editor" contenteditable="true"></code></pre>
+
 <style>
-body { display: block; min-height: 0; overflow: hidden; }
-pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-family: 'Courier New', monospace; line-height: 2.2em; counter-reset: line; }
+html, body {
+  height: 90dvh;
+  max-height: 90dvh;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+body { display: block; }
+html, body { background:black; }
+pre { 
+  margin: 0; 
+  font-family: 'Courier New', monospace; 
+  line-height: 2.2em; 
+  counter-reset: line;
+
+  tab-size: 1;
+  -moz-tab-size: 1;
+
+  display: block;
+  height: 90dvh;
+  max-width: 100vw;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  contain: layout paint;
+  trans-form: translateX(calc(var(--pan, 0) * -1px));
+  transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
 code { outline: none; display: block; }
-body, div, code, pre, span { display: unset; }
+div, code, span { display: unset; }
+
 .hljs { background: transparent !important; }
-.line { display: block !important; counter-increment: line; position: relative; }
-.line::before { content: counter(line); vertical-align: middle; left: -0.1em; padding-right: 0.2em; color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
+.line .content::before /*.line::after*/ { content: counter(line); vertical-align: top; padding: 0 0.1em; /*left: -0.1em; padding-right: 0.2em;*/ color: var(--pop); user-select: none; font-size: 0.5em; opacity: 0.8; }
+
+.line { 
+  display: block !important; 
+  counter-increment: line; 
+  position: relative; 
+  white-space: nowrap;
+}
+
+.indent { 
+  display: inline-block; 
+  white-space: pre;
+}
+.line:active .indent { max-wi-dth: 0; } 
+  
+.line {
+
+  transform-origin: left;
+  /*view-timeline-inset: 50% 0%;*/
+  animation: zoom ease both;
+  animation-timeline: view();
+  animation-range: entry 0% exit 100%;
+}
+.line:active .indent{ dis-play: none; } 
+
+@keyframes zoom {
+  0% {
+    transform: scale(0.1) translateY(0%);
+  } 65% {
+    transform: scale(1) translateY(0);
+  } 70% {
+    transform: scale(1) translateY(0);
+  } 100% {
+    transform: scale(0.3) translateY(0%);
+  }
+}
+.content {
+  display: inline-block;
+  max-width: 100vw;
+  white-space: pre-wrap;
+
+}
+.number { } 
+
 </style>
-<pre><code id="content" contenteditable="true"></code></pre>
 <script src="../util.js"></script>
 <script>
-kit.ear('cat', function hear(eve) {
+kit.ear('cat', hear);
+function hear(eve){ // hear.off();
   var s = eve.detail || eve.data || "";
-  var raw = s.flat();
-  var lines = raw.split('\n');
-  var cmdLine = (lines[0] || "").trim();
-  var text = lines.slice(1).join('\n');
-  text = text.replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
-  var codeEl = document.getElementById('content');
-  var langMap = {
-    js:'javascript', json:'json', html:'xml', css:'css',
-    md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'
-  };
+  var raw = String(s).flat();
+  var lines = raw.split(/\r\n|\r|\n/);
+  var cmd = (lines.shift() || "").trim();
+
+  var text = lines.join('\n').replace(/[\r\n]+.*(?:\$|#|>|PS>)\s*$/, '').trim();
+  var langs = {js:'javascript', json:'json', html:'xml', css:'css',md:'markdown', py:'python', sh:'bash', yaml:'yaml', yml:'yaml'};
   var lang = null;
-  var m = cmdLine.match(/cat\s+(.+)/);
-  if(m) { lang = langMap[m[1].replace(/["']/g,'').split('.').pop().toLowerCase()]; }
+  var m = cmd.match(/cat\s+(.+)/);
+  if(m){ lang = langs[m[1].replace(/["']/g,'').split('.').pop().toLowerCase()]; }
+
   var highlighted;
-  try {
-    highlighted = lang ? hljs.highlight(text, {language: lang}).value : hljs.highlightAuto(text).value;
-  } catch(e) {
-    highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  codeEl.innerHTML = highlighted.split('\n').map(function(l) {
-    return '<span class="line">' + (l || ' ') + '</span>';
+  try{ highlighted = lang ? hljs.highlight(text, {language: lang}).value : hljs.highlightAuto(text).value;
+  }catch(e){ highlighted = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+  var was;
+  editor.innerHTML = highlighted.split('\n').map(function(l){ l = trims(l);
+    return '<span class="line"><span class="indent">'+(l[0]||'')+'</span><span class="content">'+(l[1]||'')+'</span></span>';
   }).join('');
-  hear.off();
-});
+  setTimeout(function(){ kit.say({height: '90dvh'}, 'style') }, 20);
+};
+function trims(l) { return (i = l.search(/\S/)) === -1 ? [l,''] : [l.slice(0,i), l.slice(i)] }
+
+function pan(){ setTimeout(pan,99); return;
+  var el = document.elementFromPoint(1, window.innerHeight / 2), line;
+  if(!(line = el && el.closest('.line'))){ return }
+  var indent = pan.out(line);
+  if(pan.was === indent){ return }
+  document.body.style.setProperty('--pan', pan.was = indent || 0);
+};
+pan.at = function(el){ return el?.querySelector('.indent')?.textContent?.length || 0 }
+pan.out = function(el){
+  var now = pan.at(el)||1, was, i = 99;
+  while(--i && (was = pan.at(el = el.previousSibling)) >= now){}
+  if(!el){ return 0 }
+  el = el.querySelector('.content');
+  return el ? el.offsetLeft : 0;
+}
+setTimeout(pan, 1);
+//window.onkeyup = function(){ hear({detail:'cat "cat.html"\n'+editor.textContent}); }
+
+window.onkeyup = function(eve){ 
+  //window.scrollTo(eve.target);
+}
+
+(async function(){ return;
+  var t = await (await fetch("https://cdn.jsdelivr.net/gh/amark/gun@master/kit/web.js")).text();
+  
+  kit.say('cat "cat.js"\n'+(t|| document.body.parentNode.innerHTML), 'cat');
+}());
 </script>
