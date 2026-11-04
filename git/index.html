@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="en">                            <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <title>Git Mobile</title>
+  <meta name="theme-color" content="#ffffff">
+  <!-- CodeMirror & Diff2Html -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">                         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>                 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
+  <!-- Pure JS Git -->
+  <script src="https://unpkg.com/@isomorphic-git/lightning-fs@4.6.0"></script>
+  <script type="module">
+    import git from 'https://esm.sh/isomorphic-git@1.25.6';
+    import http from 'https://esm.sh/isomorphic-git@1.25.6/http/web';
+    import * as Diff from 'https://esm.sh/diff@5.1.0';
+
+    window.git = git;
+    window.git.http = http;
+    window.Diff = Diff;
+    console.log('IsoGit ESM & Diff Loaded');
+  </script>
+
+  <style>
+    /* Preserving UX */
+    :root { --bg: #fff; --text: #1a1a1a; --nav: #1a1a1a; --act: #007aff; --yes: #34c759; --hot: #ff3b30; --limbo: #007aff; --bord: #f2f2f7; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { height: 100%; width: 100%; overflow: hidden; overscroll-behavior: none; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); height: 100%; width: 100%; display: flex; flex-direction: column; margin:0; overflow:hidden; font-size: 18pt; }
+    main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overflow-x: hidden; }
+    input, textarea { width: 100%; padding: 1em; border: none; background: #f2f2f7; border-radius: 1em; font-size: 1em; margin-bottom: 1em; }
+    .view { display: none; } .view.active { display: block; }
+
+    .btn { width: 100%; border: none; padding: 0.75em; border-radius: 0.5em; font-size: 1em; font-weight: 700; cursor: pointer; display:flex; align-items:center; justify-content:center; }
+    .btn-neutral { background: #f2f2f7; color: #000; }
+    .btn-primary { background: var(--act); color: #fff; }
+    .btn-yes { background: var(--yes); color: #fff; }
+    .btn-act { background: var(--act); color: #fff; }
+    .btn-limbo { background: var(--limbo); color: #fff; }
+    .btn-hot { background: var(--hot); color: #fff; }
+    .btn-discard { background: var(--dang); color: #fff; border-radius: 0 0 8px 8px; font-size: 12px; height: 40px; }
+
+    .btn-save-header { width: auto; }
+    .btn-save-header[style*="display: none"] { display: none !important; } /* Force hide override for flex */
+    .btn-save-header.saved { background: var(--yes); cursor: default; }
+
+
+    .file-card {  }
+    .file-header { padding: 0.5em; display: flex; align-items: center; gap: 1em; font-weight: 700; cursor: pointer; position: -webkit-sticky; position: sticky; top: 0; z-index: 100; border-radius: 1em; backdrop-filter: blur(5px); }
+    .stage-toggle { width: 1.5em; height: 1.5em; border-radius: 50%; border: 1px solid var(--yes); display: grid; place-items: center; color: transparent; transition:0.2s; flex-shrink:0; }
+    .stage-toggle.checked { background: var(--yes); color: #fff; }
+    .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chevron { transition: 0.2s; color: var(--act); font-size: 0.75em; }
+    .collapsed .chevron { transform: rotate(-90deg); }
+    .collapsed .file-content { display: none; }
+
+    .file-content { padding: 0; position: relative; } /* No padding for editor */
+
+    .diff-block { background: #fafafa; border: 1px solid #eee; border-radius: 8px; font-family: "SF Mono", monospace; font-size: 14px; overflow-x: auto; margin-top:10px; }
+    .diff-line { padding: 8px; border-bottom: 1px solid #f0f0f0; white-space: pre-wrap; display: flex; }
+    .diff-line.add { background: #e8f5e9; color: #1b5e20; }
+    .diff-line.del { background: #ffebee; color: #b71c1c; }
+    .diff-line.ctx { color: #555; }
+    .change-header { background: var(--yes); color: #fff; padding: 10px; font-size: 11px; font-weight: 800; border-radius: 8px 8px 0 0; margin-top: 15px; display:flex; justify-content:space-between; }
+
+    #editor-overlay { position: fixed; inset: 0; top:0; left:0; right:0; bottom:0; background: #fff; z-index: 200; display: none; flex-direction: column; height: auto; }
+    #editor-overlay.active { display: flex; }
+    .editor-toolbar {
+      width: 100%; overflow: scroll;
+      position: fixed; bottom: 0; right: 0;
+      padding: 1em; display: flex; gap: 1em;
+      z-index: 202;
+      transition: transform 0.3s;
+    }
+    .editor-toolbar.hidden { transform: translateY(100%); }
+
+    .card-toolbar {
+        position: sticky; bottom: 0; left: 0; right: 0;
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);
+        border-top: 1px solid #eee; z-index: 30;
+        padding: 0.5em; display: flex; gap: 0.5em; overflow-x: auto;
+    }
+    .card-toolbar .btn { width: auto; flex-shrink: 0; padding: 0.5em 1em; font-size: 0.9em; }
+    .card-toolbar input { width: 5em; padding: 0 0.5em; margin: 0; border-radius: 0.5em; }
+
+    #file-select {
+      appearance: none; -webkit-appearance: none;
+      height: 3em; padding: 0 2.5em 0 1em;
+      background: #f2f2f7; border-radius: 1em;
+      font-weight: 700; color: #1a1a1a; font-size: 1em;
+      margin: 0; flex: 1; border: none; outline: none; min-width: 150px;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 1em center; background-size: 1.5em;
+    }
+
+    .CodeMirror { height: 100% !important; margin: 0 -0.9em; font-family: "SF Mono", "Menlo", monospace; font-size: 0.75em; line-height: 2.2; }
+    .CodeMirror-gutters { background: #fff !important; border-right: none !important; }
+    .CodeMirror-linenumber { text-align: center !important; color: var(--act);  font-size: 0.5em; padding-top: 1.5em; }
+    .CodeMirror-scroll { padding: 2em 0 10em 0; }
+    #editor-overlay .CodeMirror { padding-bottom: 8em !important; }
+
+    /* Diff Editor Styles */
+    .file-card .CodeMirror { height: auto !important; min-height: 100px; }
+    .file-card .CodeMirror-scroll { padding-bottom: 60px; }
+    .line-add { background: rgba(52, 199, 89, 0.15); }
+    .char-add { background: rgba(52, 199, 89, 0.4); } /* Darker green */
+
+    .line-del-widget {
+        background: rgba(255, 59, 48, 0.15);
+        color: #b71c1c; padding: 0 4px;
+        font-family: "SF Mono", "Menlo", monospace; font-size: 18px; line-height: 2.2;
+        white-space: pre-wrap; user-select: none;
+    }
+    .char-del { background: rgba(255, 59, 48, 0.4); text-decoration: line-through; } /* Darker red */
+    .file-actions { display: flex; align-items: center; gap: 1em; margin-left: auto; flex-shrink: 0; }
+    .btn-sm { height: 32px; font-size: 13px; padding: 0 15px; border-radius: 6px; }
+
+    .fullscreen-only { display: none !important; }
+    .mode-fullscreen .fullscreen-only { display: flex !important; }
+
+    .flash-highlight {
+      background-color: rgba(255, 255, 0, 0.8);
+      animation: fadeOut 50s forwards;
+    }
+    @keyframes fadeOut {
+      from { background-color: rgba(255, 255, 0, 0.8); }
+      to { background-color: transparent; }
+    }
+  </style>
+</head>
+<body>
+<textarea id="log" style="display: none; position: fixed; z-index: 999; top: 0; left: 0; width: 100%; height: 2em;" ></textarea>
+
+<!-- DIALOGS -->
+<dialog id="modal" style="border:none; border-radius:20px; padding:25px; width:80%; max-width:350px; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center;">
+  <p id="modal-msg" style="font-size:17px; font-weight:500; margin-bottom:20px; white-space:pre-wrap; overflow-wrap:break-word; word-break:break-word;"></p>
+  <input type="text" id="modal-input" style="display:none;">
+  <div style="display:flex; gap:1em; flex-wrap:wrap; justify-content:center;">
+    <button class="btn btn-neutral" id="modal-cancel">Cancel</button>
+    <button class="btn btn-primary" id="modal-ok">OK</button>
+  </div>
+</dialog>
+
+<!-- EDITOR -->
+<div id="editor-overlay">
+  <div style="flex:1; position:relative; overflow:hidden;"><textarea id="cm-source"></textarea></div>
+</div>
+
+<!-- GLOBAL TOOLBAR -->
+<div class="editor-toolbar hidden">
+    <div style="min-width:50vw"></div>
+    <button class="btn btn-hot fullscreen-only" onclick="App.closeEditor()">&larr;</button>
+    <select id="file-select" class="btn fullscreen-only" onchange="App.loadEditor(this.value)">
+       <option value="">Select File...</option>
+       <option value="__NEW__">+ New File</option>
+    </select>
+    <button class="btn btn-limbo" onclick="App.tryAI()">AI</button>
+    <button class="btn btn-limbo" onclick="App.activeSave()">Save</button>
+    <input id="find-box" placeholder="Find" oninput="App.find(this.value, true, null, false)" onkeydown="if(event.key==='Enter') App.find(this.value, true, null, true)" style="min-width:5em; width:5em; padding:0 1em; margin:0; border-radius:1em; border:none; background:#f2f2f7; font-weight:700;">
+    <button class="btn" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault();App.copyActive()" onclick="App.copyActive()">Copy</button>
+    <button class="btn" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault();App.pasteActive()" onclick="App.pasteActive()">Paste</button>
+    <button class="btn" onclick="App.insertActive('()')">()</button>
+    <button class="btn" onclick="App.insertActive('-')">-</button>
+    <button class="btn" onclick="App.insertActive('=')">=</button>
+    <button class="btn" onclick="App.insertActive('{}')">{}</button>
+    <button class="btn" onclick="App.insertActive('[]')">[]</button>
+    <button class="btn" onclick="App.insertActive(':')">:</button>
+    <button class="btn" onclick="App.insertActive('&quot;')">"</button>
+    <button class="btn" onclick="App.insertActive('&lt;&gt;')">&lt;&gt;</button>
+    <button class="btn" onclick="App.insertActive('/')">/</button>
+    <button class="btn" onclick="App.insertActive('|')">|</button>
+    <button class="btn" onclick="App.insertActive('&amp;')">&</button>
+</div>
+
+<!-- MAIN UI -->
+<main id="main">
+  <div id="review-view" class="view active">
+    <div style="display:flex; gap:1em; padding: 1em; align-items:center">
+      <button class="btn btn-neutral" style="width:auto" onclick="App.openRepoDialog()">Open <span id="current-repo" style="margin-left:0.5em; opacity:0.7">/</span></button>
+      <button class="btn btn-neutral" style="flex:1" onclick="App.runGit('fetch')">Fetch</button>
+      <button class="btn btn-neutral" style="flex:1" onclick="App.runGit('pull')">Pull</button>
+    </div>
+    <button class="btn btn-yes" style="margin: 0 auto; width: 90%;" onclick="App.openEditor()">+ NEW CHANGES</button>
+
+    <div id="file-list" style="padding-top:1em;"></div>
+
+<!-- REPO DIALOG -->
+<dialog id="repo-modal" style="border:none; border-radius:20px; padding:25px; width:90%; max-width:400px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+  <h3>Repositories</h3>
+  <div id="repo-list" style="display:flex; flex-direction:column; gap:0.5em; max-height:200px; overflow:auto; margin-bottom:1em;"></div>
+
+  <label class="btn btn-neutral" style="margin-bottom:1em; border:1px dashed #999; display:flex; align-items:center; justify-content:center; cursor:pointer" onclick="App.importDeviceFolder()">
+      📂 Import Device Folder
+  </label>
+  <input id="import-input-main" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, false)">
+  <input id="import-input-git" type="file" webkitdirectory directory multiple style="display:none" onchange="App.handleImport(this, true)">
+
+  <div id="import-debug" style="font-family:monospace; font-size:10px; background:#eee; padding:5px; margin-top:10px; max-height:100px; overflow:auto; display:none;"></div>
+
+  <!-- Shared Progress UI -->
+
+  <!-- Shared Progress UI -->
+  <div id="repo-progress-container" style="display:none; margin-top:1em; background:#f2f2f7; padding:1em; border-radius:0.5em;">
+      <div id="repo-progress-text" style="font-family:monospace; font-size:0.8em; margin-bottom:0.5em;">Initializing...</div>
+      <progress id="repo-progress-bar" value="0" max="100" style="width:100%"></progress>
+  </div>
+
+  <hr>
+  <h4>Clone New</h4>
+  <input id="new-repo-url" placeholder="https://github.com/user/repo">
+  <div style="display:flex; gap:0.5em">
+      <button class="btn btn-act" onclick="App.cloneFromDialog()">Clone</button>
+      <button class="btn btn-neutral" onclick="document.getElementById('repo-modal').close()">Close</button>
+  </div>
+</dialog>
+
+    <div id="commit-box" style="padding:1em;">
+      <textarea id="commit-msg" rows="1" placeholder="Commit message..." style="background:transparent; border-bottom:2px dashed var(--act); border-radius: 10em; padding: 0.5em 2em;"></textarea>
+      <button class="btn btn-yes" onclick="App.commit()">Commit</button>
+      <textarea id="spellpredict" style="display: none; position: fixed; z-index: 999; bottom: 0; left: 0; width: 100%; height: 2em; opacity: 0.5;"></textarea>
+      <script>
+        window['commit-msg'].oninput = async function(){
+          spellpredict.style.display = 'block';
+          spellpredict.value = await AI.spell(this.value); // it's working!
+        }
+      </script>
+
+
+    </div>
+    <button class="btn btn-act" style="margin: 1em auto; width: 90%;" onclick="App.runGit('push')">Push</button>
+
+    <div style="padding:1em;">
+      <button class="btn btn-neutral" onclick="App.tab('config')">Settings & Config</button>
+    </div>
+  </div>
+
+  <div id="config-view" class="view" style="padding:1em;">
+    <button class="btn btn-act" onclick="App.tab('review')">&larr; Back</button>
+    <h3>Git Config</h3>
+    <input id="cfg-key" placeholder="Key (e.g. user.name)">
+    <input id="cfg-val" placeholder="Value">
+    <div style="display:flex; gap:1em;">
+        <button class="btn btn-act" onclick="App.cfg('get')">Get</button>
+        <button class="btn btn-act" onclick="App.cfg('set')">Set</button>
+    </div>
+    <button class="btn btn-hot" style="margin-top:1em;" onclick="App.cfg('unset')">Unset</button>
+    <pre id="cfg-out" style="background:#f2f2f7; padding:1em; border-radius:1em; margin-top:1em; overflow:auto;"></pre>
+
+    <div style="margin-top: 2em; display: flex; align-items: center; gap: 0.5em;">
+        <input type="checkbox" id="debug-toggle" onchange="App.toggleDebug(this.checked)" style="width: auto; margin: 0;">
+        <label for="debug-toggle" style="font-weight: bold;">Show Debug Info</label>
+    </div>
+
+    <hr style="margin: 2em 0; border: 0; border-top: 1px solid #eee;">
+    <h3>Browser Git</h3>
+    <div style="background: #e8f5e9; padding: 1em; border-radius: 1em;">
+        <p style="font-size: 0.8em; margin-top: 0;">Runs entirely in your browser (IndexedDB). No server needed.</p>
+        <div style="display:flex; gap:1em; margin-bottom: 1em;">
+            
+            <button class="btn btn-yes" onclick="App.setMode('browser')">Use Browser (IsoGit)</button>
+        </div>
+        <div id="browser-controls">
+            <input id="cors-proxy" placeholder="CORS Proxy" value="https://cors.isomorphic-git.org">
+            <input id="token" type="password" placeholder="Token (push/pull, saved in this browser only)">
+            <div id="browser-progress" style="margin-top:1em; padding:1em; background:#f2f2f7; border-radius:0.5em; font-family:monospace; font-size:0.8em; display:none; white-space:pre-wrap;"></div>
+
+            <button class="btn btn-neutral" style="margin-top:0.5em" onclick="App.runGit('ls-files')">List Files (Debug)</button>
+            <button class="btn btn-hot" style="margin-top:0.5em" onclick="App.runGit('diagnose')">Run Diagnostics</button>
+
+            <h4 style="margin-top:1em">Debug Tools</h4>
+            <button class="btn btn-neutral" onclick="App.runGit('debug-status')">Check Status Matrix (Raw)</button>
+            <div style="display:flex; gap:0.5em; margin-top:0.5em">
+                <input id="debug-file" placeholder="File path (e.g. README.md)" style="margin:0; flex:1">
+                <button class="btn btn-neutral" style="width:auto" onclick="App.runGit('debug-read')">Read Content</button>
+            </div>
+            <button class="btn btn-neutral" style="margin-top:0.5em" onclick="App.runGit('debug-refs')">Check Refs (HEAD)</button>
+            <button class="btn btn-neutral" style="margin-top:0.5em" onclick="App.runGit('debug-diff')">Check Diff (Raw)</button>
+            <pre id="debug-out" class="debug-ui" onclick="navigator.clipboard.writeText(this.textContent).then(()=>alert('Logs copied!'))" style="background:#333; color:#0f0; padding:1em; border-radius:0.5em; font-size:10px; overflow:auto; max-height:200px; margin-top:0.5em; display:none; cursor:pointer;" title="Tap to copy logs"></pre>
+
+            <h4 style="margin-top:1em; color:var(--hot)">Danger Zone</h4>
+            <button class="btn btn-hot" onclick="App.resetStorage()">Dangerously Reset All Storage</button>
+        </div>
+    </div>
+  </div>
+  <center><p>:)</p></center>
+</main>
+
+<script>
+// --- FILESYSTEM ADAPTERS ---
+let activeFS = null; // Will hold either LightningFS or DeviceFS wrapper
+
+class DeviceFSAdapter {
+    constructor(handle) { this.handle = handle; this.promises = this; }
+
+    async _getHandle(path, create=false, directory=false) {
+        const parts = path.split('/').filter(p => p && p !== '.');
+        let curr = this.handle;
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            const isLast = i === parts.length - 1;
+            if (isLast && !directory) {
+                return await curr.getFileHandle(part, { create });
+            } else {
+                curr = await curr.getDirectoryHandle(part, { create: create || (isLast && create) });
+            }
+        }
+        return curr;
+    }
+
+    async readFile(path, encoding) {
+        try {
+            const handle = await this._getHandle(path);
+            const file = await handle.getFile();
+            const text = await file.text();
+            return text; // buffer/encoding logic omitted for brevity, assuming utf8 text
+        } catch(e) {
+            if(e.name === 'NotFoundError') throw { code: 'ENOENT' };
+            throw e;
+        }
+    }
+
+    async writeFile(path, data, encoding) {
+        const handle = await this._getHandle(path, true);
+        const writable = await handle.createWritable();
+        await writable.write(data);
+        await writable.close();
+    }
+
+    async readdir(path) {
+        try {
+            const handle = await this._getHandle(path, false, true);
+            const names = [];
+            for await (const [name] of handle.entries()) {
+                names.push(name);
+            }
+            return names;
+        } catch(e) {
+             if(e.name === 'NotFoundError') throw { code: 'ENOENT' };
+             throw e;
+        }
+    }
+
+    async mkdir(path) { await this._getHandle(path, true, true); }
+
+    async stat(path) {
+        try {
+            const handle = await this._getHandle(path);
+            // Mock stat object
+            return {
+                isDirectory: () => handle.kind === 'directory',
+                isFile: () => handle.kind === 'file',
+                mtimeMs: Date.now(), // Fake time
+                size: 0
+            };
+        } catch(e) {
+             if(e.name === 'NotFoundError') throw { code: 'ENOENT' };
+             throw e;
+        }
+    }
+
+    async unlink(path) {
+        // Parent handle needed
+        const parts = path.split('/').filter(p => p);
+        const name = parts.pop();
+        const parentPath = parts.join('/');
+        const parent = await this._getHandle(parentPath, false, true);
+        await parent.removeEntry(name);
+    }
+
+    async rmdir(path) { return this.unlink(path); }
+}
+
+// --- ISOMORPHIC GIT SETUP ---
+// Ensure libraries are loaded
+let fs, pf, git, http;
+let activeDir = localStorage.getItem('git_active_dir') || '/';
+
+function initIsoGit() {
+    if (window.LightningFS) {
+        fs = new LightningFS('fs');
+        pf = fs.promises;
+    }
+
+    if (window.git) {
+        git = window.git;
+        http = window.git.http;
+        if (http) console.log('IsoGit HTTP plugin confirmed.');
+    }
+}
+
+// --- CORE API ---
+const BrowserGit = {
+    async run(cmd, ...args) {
+      // DEBUG: Trace execution
+      // await UI.alert('BG.run: ' + cmd);
+
+      try {
+        // Ensure env is ready
+        initIsoGit();
+        // await UI.alert('Init done');
+
+        // Normalize arguments
+        const fullCmd = Array.isArray(cmd) ? cmd : [cmd, ...args];
+        const command = fullCmd[0];
+
+        // await UI.alert('Cmd: ' + command);
+
+        // If using DeviceFS, activeDir is root of that handle, so '.'
+        const dir = (activeFS instanceof DeviceFSAdapter) ? '.' : activeDir;
+        // Use activeFS.promises or pf (which is lightning)
+        const fsToUse = activeFS || fs;
+
+        // try { // removed inner try
+            if (command === 'clone-browser') {
+                console.log('BrowserGit: Cloning...', args);
+                // await UI.alert('Inside clone block');
+                // args[0] is URL (passed from App.cloneFromDialog)
+                const url = args[0] || (document.getElementById('clone-url') ? document.getElementById('clone-url').value : '');
+                const proxy = document.getElementById('cors-proxy').value;
+                const token = args[1] || ''; // Optional token
+
+                if (!url) return { ok: false, text: 'No URL provided' };
+
+                // Extract repo name from URL for directory
+                // e.g. https://github.com/user/repo -> /repo
+                const repoName = url.split('/').pop().replace('.git', '') || 'repo';
+                const targetDir = '/' + repoName;
+
+                if (!http) {
+                     // Try one last desperate search
+                     if (window.git && window.git.http) http = window.git.http;
+                     else if (window.Git && window.Git.http) http = window.Git.http;
+                }
+
+                if (!http) {
+                    console.log('Debug: window.git keys:', window.git ? Object.keys(window.git) : 'missing');
+                    return { ok: false, text: 'Error: Git HTTP plugin not loaded.\nTry waiting a few seconds and clicking again.\nDebug: ' + (window.git ? 'Git found' : 'Git missing') };
+                }
+
+                // Target the modal progress UI
+                const pContainer = document.getElementById('repo-progress-container');
+                const pText = document.getElementById('repo-progress-text');
+                const pBar = document.getElementById('repo-progress-bar');
+
+                if (pContainer) pContainer.style.display = 'block';
+                if (pText) pText.textContent = `Cloning to ${targetDir}...`;
+
+                // Ensure parent dir exists (if we go deeper), but / is always there in LightningFS?
+                // Actually we need to make the dir.
+                try { await pf.mkdir(targetDir); } catch(e) {}
+
+                await git.clone({
+                    fs,
+                    http,
+                    dir: targetDir,
+                    corsProxy: proxy,
+                    url,
+                    singleBranch: true,
+                    depth: 1,
+                    onAuth: () => ({ username: token }),
+                    onProgress: (p) => {
+                        let msg = p.phase;
+                        if (p.loaded) msg += ` ${p.loaded}`;
+                        if (p.total) msg += ` / ${p.total}`;
+
+                        if (pText) pText.textContent = msg;
+                        if (pBar && p.total) {
+                            pBar.value = (p.loaded / p.total) * 100;
+                        } else if (pBar) {
+                            pBar.removeAttribute('value'); // Indeterminate
+                        }
+                    }
+                });
+
+                // Update active dir and switch
+                activeDir = targetDir;
+                localStorage.setItem('git_active_dir', activeDir);
+
+                if (pText) pText.textContent = 'Clone Complete!';
+                setTimeout(() => {
+                    if (pContainer) pContainer.style.display = 'none';
+                }, 5000);
+
+                // Auto-refresh logic handled by caller usually, but let's signal success
+                return { ok: true, text: `Cloned to ${targetDir}` };
+            }
+
+            if (command === 'ls-files') {
+               const files = await git.listFiles({ fs: fsToUse, dir });
+               return { ok: true, text: files.join('\n') };
+            }
+
+            if (command === 'add') {
+               // Support "add ." or "add filepath"
+               const path = fullCmd[1];
+               if (path === '.') {
+                   // Add all modified files (simplified: just add everything)
+                   const files = await git.listFiles({ fs: fsToUse, dir });
+                   for(const f of files) await git.add({ fs: fsToUse, dir, filepath: f });
+               } else {
+                   await git.add({ fs: fsToUse, dir, filepath: path });
+               }
+               return { ok: true, text: '' };
+            }
+
+            if (command === 'commit') {
+               const msgIndex = fullCmd.indexOf('-m');
+               const msg = msgIndex > -1 ? fullCmd[msgIndex+1] : 'No message';
+               await git.commit({
+                   fs: fsToUse, dir,
+                   message: msg,
+                   author: { name: 'Browser User', email: 'browser@local' }
+               });
+               return { ok: true, text: 'Committed' };
+            }
+
+            if (command === 'status') {
+               // Get status matrix
+               const matrix = await git.statusMatrix({ fs: fsToUse, dir });
+               // Convert to "XY Path\0" format
+               // row: [filepath, head, workdir, stage]
+               // 0: absent, 1: present, 2: different
+               let output = [];
+
+               for (const [filepath, head, workdir, stage] of matrix) {
+                   // Calculate X (Index) and Y (WorkTree) codes
+                   // Simplified mapping based on common states:
+                   let x = ' ', y = ' ';
+
+                   // Index Status (X)
+                   if (head === 0 && stage === 2) x = 'A'; // Added
+                   else if (head === 1 && stage === 0) x = 'D'; // Deleted
+                   else if (head === 1 && stage === 2) x = 'M'; // Modified
+
+                   // Worktree Status (Y)
+                   if (stage === 0 && workdir === 2) y = '?'; // Untracked (but matrix handles this diff)
+                   // Actually matrix uses:
+                   // [0, 2, 0] -> New, Untracked (??)
+                   // [0, 2, 2] -> Added, staged (A )
+                   // [0, 2, 3] -> Added, staged, modified (AM) - wait, val is 0,1,2.
+
+                   // Let's use the standard iso-git mapping logic roughly
+                   if (head === 0 && workdir === 2 && stage === 0) { x = '?'; y = '?'; }
+                   else if (head === 0 && workdir === 2 && stage === 2) { x = 'A'; y = ' '; }
+                   else if (head === 1 && workdir === 0 && stage === 1) { x = ' '; y = 'D'; }
+                   else if (head === 1 && workdir === 0 && stage === 0) { x = 'D'; y = ' '; }
+                   else if (head === 1 && workdir === 2 && stage === 1) { x = ' '; y = 'M'; }
+                   else if (head === 1 && workdir === 2 && stage === 2) { x = 'M'; y = ' '; }
+
+                   // Filter out unmodified
+                   if (x === ' ' && y === ' ') continue;
+
+                   output.push(`${x}${y} ${filepath}`);
+               }
+               return { ok: true, text: output.join('\0') };
+            }
+
+            if (command === 'diff') {
+               const cached = fullCmd.includes('--cached');
+               const matrix = await git.statusMatrix({ fs: fsToUse, dir });
+               let diffOutput = '';
+
+               // Resolve HEAD OID once to avoid repetitive resolution errors
+               let headOid = null;
+               try { headOid = await git.resolveRef({ fs: fsToUse, dir, ref: 'HEAD' }); } catch(e){}
+
+               for (const [filepath, head, workdir, stage] of matrix) {
+                   try {
+                       let patch = '';
+                       // Helper to normalize line endings
+                       const norm = (str) => str ? str.replace(/\r\n/g, '\n') : '';
+
+                       // Construct correct path for reading current content
+                       // If DeviceFS, dir is '.', path is 'filepath'.
+                       // If LightningFS, dir is '/repo', path is '/repo/filepath'.
+                       const targetPath = (activeFS instanceof DeviceFSAdapter ? '' : dir) + '/' + filepath;
+
+                       if (localStorage.getItem('git_debug')) {
+                           const out = document.getElementById('debug-out');
+                           if(out) {
+                               out.textContent += `Diff Check: ${filepath} H:${head} W:${workdir} S:${stage} Cached:${cached}\n`;
+                               out.scrollTop = out.scrollHeight;
+                           }
+                       }
+
+                       if (cached) {
+                           // Staged Diff (--cached)
+                           // Show if stage is Modified (2) or Mixed (3)
+                           // Also show if New (head=0, stage=2)
+                           if (stage >= 2) {
+                               let headStr = '';
+                               if (head === 1) {
+                                  try {
+                                      const oid = headOid || 'HEAD';
+                                      const obj = await git.readBlob({ fs: fsToUse, dir, filepath, oid });
+                                      headStr = new TextDecoder().decode(obj.blob);
+                                  } catch(e) { headStr = ''; }
+                               }
+                               let currStr = '';
+                               try {
+                                   currStr = await fsToUse.promises.readFile(targetPath, 'utf8');
+                               } catch(e) { console.warn('Diff Read Error:', e); }
+
+                               // For staged diff, we compare HEAD vs INDEX.
+                               // But we read currStr from WORKDIR?
+                               // Correctness: If staged, we should read from INDEX (git.readBlob with stage oid?)
+                               // IsoGit doesn't easily expose "read index blob".
+                               // But if workdir == stage (which it is after add), reading workdir is fine.
+
+                               patch = window.Diff.createTwoFilesPatch('a/'+filepath, 'b/'+filepath, norm(headStr), norm(currStr), 'HEAD', 'Index');
+                           }
+                       } else {
+                           // Unstaged Diff
+                           // If workdir != stage
+                           if (workdir === 2 && stage !== 2) {
+                               let srcStr = '';
+                               try {
+                                  // Compare against Index (Stage)
+                                  // We can't easily read Stage blob.
+                                  // Fallback: Compare against HEAD if stage matches HEAD?
+                                  // Or just compare HEAD vs Workdir if stage is clean?
+
+                                  // Simplified: Compare HEAD vs Workdir if unstaged?
+                                  // No, that ignores staging area.
+
+                                  // If we assume stage matches HEAD (unstaged changes), we read HEAD.
+                                  if (head === 1) {
+                                      const oid = headOid || 'HEAD';
+                                      const obj = await git.readBlob({ fs: fsToUse, dir, filepath, oid });
+                                      srcStr = new TextDecoder().decode(obj.blob);
+                                  }
+                               } catch(e) {}
+
+                               const currStr = await fsToUse.promises.readFile(targetPath, 'utf8');
+                               patch = window.Diff.createTwoFilesPatch('a/'+filepath, 'b/'+filepath, norm(srcStr), norm(currStr), 'Index', 'Working');
+                           }
+                       }
+
+                       if (patch) {
+                           const lines = patch.split('\n');
+
+                           // js-diff SOMETIMES returns header lines (Index:..., ===...)
+                           // Only strip them if they exist.
+                           let cleanPatchLines = lines;
+                           if (lines.length > 0 && lines[0].startsWith('Index:')) {
+                               cleanPatchLines = lines.slice(2);
+                           }
+
+                           // Clean up --- and +++ lines (remove "Index", "Working", timestamps)
+                           cleanPatchLines = cleanPatchLines.map(l => {
+                               if (l.startsWith('--- ') || l.startsWith('+++ ')) {
+                                   // Keep only path: "--- a/file"
+                                   return l.split('\t')[0];
+                               }
+                               return l;
+                           });
+
+                           // Fix Quoting: "a/file" not a/"file"
+                           const pathA = `a/${filepath}`;
+                           const pathB = `b/${filepath}`;
+                           const qA = pathA.includes(' ') ? `"${pathA}"` : pathA;
+                           const qB = pathB.includes(' ') ? `"${pathB}"` : pathB;
+
+                           const gitHeader = `diff --git ${qA} ${qB}\nindex 0000000..1111111 100644\n`;
+                           diffOutput += gitHeader + cleanPatchLines.join('\n') + '\n';
+                       }
+                   } catch(e) { console.error('Diff error for ' + filepath, e); }
+               }
+
+               return { ok: true, text: diffOutput };
+            }
+
+            if (command === 'diagnose') {
+                let msg = 'Diagnostics:\n';
+                msg += 'window.git: ' + (window.git ? 'Found' : 'Missing') + '\n';
+                if (window.git) {
+                    msg += 'Keys: ' + Object.keys(window.git).join(', ') + '\n';
+                    msg += 'git.http: ' + (window.git.http ? 'Found' : 'Missing') + '\n';
+                }
+                msg += 'window.Git: ' + (window.Git ? 'Found' : 'Missing') + '\n';
+                msg += 'window.LightningFS: ' + (window.LightningFS ? 'Found' : 'Missing') + '\n';
+                msg += 'Internal http var: ' + (http ? 'Found' : 'Missing') + '\n';
+
+                // Try to guess where it went
+                if (window.git && !window.git.http) {
+                     msg += 'WARNING: git.http is missing. Check script loading.\n';
+                }
+
+                return { ok: true, text: msg };
+            }
+
+            // --- DEBUG COMMANDS ---
+            if (command === 'debug-status') {
+                const matrix = await git.statusMatrix({ fs, dir });
+                const out = document.getElementById('debug-out');
+                out.style.display = 'block';
+                out.textContent = 'Status Matrix:\n' + matrix.map(r => JSON.stringify(r)).join('\n');
+                return { ok: true, text: 'Status printed below' };
+            }
+
+            if (command === 'debug-read') {
+                let path = document.getElementById('debug-file').value;
+                const out = document.getElementById('debug-out');
+                out.style.display = 'block';
+
+                try {
+                    let content = '';
+                    if (path.startsWith('HEAD:')) {
+                        // Detailed Debug Read
+                        path = path.substring(5); // remove HEAD:
+                        out.textContent = `Debugging read for '${path}'...\n`;
+
+                        // 1. Resolve HEAD
+                        const headOid = await git.resolveRef({ fs, dir, ref: 'HEAD' });
+                        out.textContent += `1. HEAD -> ${headOid}\n`;
+
+                        // 2. Read Commit
+                        const commit = await git.readCommit({ fs, dir, oid: headOid });
+                        const treeOid = commit.commit.tree;
+                        out.textContent += `2. Commit -> Tree: ${treeOid}\n`;
+
+                        // 3. Read Blob directly (what failed before)
+                        out.textContent += `3. Attempting direct readBlob...\n`;
+                        try {
+                            const obj = await git.readBlob({ fs, dir, filepath: path, oid: 'HEAD' });
+                            content = new TextDecoder().decode(obj.blob);
+                            out.textContent += `SUCCESS! Content Len: ${content.length}\nSample: ${content.substring(0, 100)}...`;
+                        } catch(e) {
+                            out.textContent += `FAILED (HEAD string): ${e.message}. Retrying with OID...\n`;
+                            const obj = await git.readBlob({ fs, dir, filepath: path, oid: headOid });
+                            content = new TextDecoder().decode(obj.blob);
+                            out.textContent += `SUCCESS (OID)! Content Len: ${content.length}\n`;
+                        }
+                    } else {
+                        // Read from FS
+                        const absPath = path.startsWith('/') ? path : '/'+path;
+                        const targetPath = dir + absPath;
+                        content = await pf.readFile(targetPath, 'utf8');
+                        out.textContent = `Workdir Content of ${path} (Len: ${content.length}):\n` + content.substring(0, 500) + (content.length>500?'...':'');
+                    }
+                } catch(e) {
+                    out.textContent += '\nFAILED: ' + e.message;
+                    if (e.code) out.textContent += ` (Code: ${e.code})`;
+                }
+                return { ok: true, text: 'Read attempted' };
+            }
+
+            if (command === 'debug-refs') {
+                const out = document.getElementById('debug-out');
+                out.style.display = 'block';
+                let msg = 'Resolving Refs...\n';
+                try {
+                    const head = await git.resolveRef({ fs, dir, ref: 'HEAD' });
+                    msg += `HEAD -> ${head}\n`;
+                } catch(e) { msg += `HEAD Error: ${e.message}\n`; }
+
+                try {
+                    const branches = await git.listBranches({ fs, dir });
+                    msg += `Branches: ${branches.join(', ')}\n`;
+                } catch(e) { msg += `Branch List Error: ${e.message}\n`; }
+
+                try {
+                    const files = await pf.readdir(dir + '/.git');
+                    msg += `/.git contents: ${files.join(', ')}\n`;
+                } catch(e) { msg += `/.git Read Error: ${e.message}`; }
+
+                out.textContent = msg;
+                return { ok: true, text: 'Refs Checked' };
+            }
+
+            if (command === 'debug-diff') {
+                const out = document.getElementById('debug-out');
+                out.style.display = 'block';
+                out.textContent = 'Generating Diff...\n';
+
+                // Re-run the diff logic manually to capture output
+                const res = await this.run('diff');
+                // Also run cached
+                const resCached = await this.run(['diff', '--cached']);
+
+                let combined = '--- Unstaged ---\n' + (res.text || '(empty)') + '\n\n--- Staged ---\n' + (resCached.text || '(empty)');
+
+                out.textContent = combined;
+                return { ok: true, text: 'Diff Calculated' };
+            }
+
+            if (window.more && more[command]) return await more[command]({ git, http, fs: fsToUse, dir, args: fullCmd.slice(1) });
+            return { ok: false, text: 'Command not implemented in Browser Mode: ' + command };
+        } catch (e) {
+            console.error(e);
+            return { ok: false, text: e.message };
+        }
+    },
+
+    async listFiles() {
+        const fsToUse = activeFS || fs;
+        const dir = (activeFS instanceof DeviceFSAdapter) ? '.' : activeDir;
+        return await git.listFiles({ fs: fsToUse, dir });
+    }
+};
+
+let CurrentGit = BrowserGit;
+const Git = {
+    run: async (...args) => {
+        const start = Date.now();
+        const res = await CurrentGit.run(...args);
+
+        if (localStorage.getItem('git_debug')) {
+            const out = document.getElementById('debug-out');
+            if (out) {
+                const cmdStr = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+                out.textContent += `--- [CMD] ${cmdStr} (${Date.now() - start}ms) ---\n`;
+                if (res.text) {
+                    // Truncate massive outputs for sanity, but keep enough for diffs
+                    const txt = res.text.length > 5000 ? res.text.substring(0, 5000) + '... (truncated)' : res.text;
+                    out.textContent += txt + '\n\n';
+                }
+                out.scrollTop = out.scrollHeight;
+            }
+        }
+        return res;
+    },
+    listFiles: (...args) => CurrentGit.listFiles(...args),
+    patch: (...args) => CurrentGit.patch ? CurrentGit.patch(...args) : { ok: false, text: 'Not supported' }
+};
+
+const BrowserFS = {
+    async read(path) {
+        try {
+            // LightningFS expects absolute paths
+            const absPath = path.startsWith('/') ? path : '/' + path;
+            return await pf.readFile(activeDir + absPath, 'utf8');
+        } catch(e) {
+            console.error('FS Read Error:', e);
+            await UI.alert('Read Error: ' + e.message);
+            return '';
+        }
+    },
+    async write(path, content) {
+        try {
+            const absPath = path.startsWith('/') ? path : '/' + path;
+            return await pf.writeFile(activeDir + absPath, content, 'utf8');
+        } catch(e) {
+            console.error('FS Write Error:', e);
+            await UI.alert('Write Error: ' + e.message);
+            throw e;
+        }
+    }
+};
+
+let CurrentFS = BrowserFS;
+const FS = {
+    read: (...args) => CurrentFS.read(...args),
+    write: (...args) => CurrentFS.write(...args)
+};
+
+;(function(){ var key;
+window.AI = {
+  async ask(q){
+    var s, r = (await (await fetch("https://ch.at/"+encodeURIComponent(q))).text());
+    return r.slice(s = r.indexOf("\nA:")+4, r.indexOf("</textarea>")).trim();
+  },
+  async spell(w){
+    return this.ask('TEXT ONLY NO HTML spell correct & add next predicted word to this sentence: '+w);
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{role:'system',content:"Super genius coding assistant, hep with this code:"+code},{ role: "user", content: "Fix spelling: 'I hav a qustion'" }],
+        max_tokens: 15,
+        temperature: 0,
+        provider: { sort: "latency" },
+        stream: false
+      }),
+    });
+  },
+  async code(q, code, path){ console.log("ask OR", q, code, path);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST", headers: { "Authorization": "Bearer "+await AI.key(), "Content-Type": "application/json",
+        //'HTTP-Referer': window.location.href, // be ranked?
+        'X-Title': 'Code on Phone'
+      }, body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{role:'system',content:"IMPORTANT: REPLY WITH ONLY CODE, NO EXPLAIN!!! You are a super genius John Carmack but of "+(path||"performance coding")+", it has 10M+ monthly users on decade+ old low end netbooks, so help me with blazing fast, low dependency, simple clean code for: ```"+code},{ role: "user", content: q }],
+        max_tokens: 100_000,
+        temperature: 0.7,
+        stream: false
+      }),
+    });
+    return await response.json();
+  },
+  async key(){
+    return key || (key = localStorage.ork || (localStorage.ork = await UI.prompt(`openrouter key?`)));
+  }
+}}());
+
+// --- UTILS ---
+const Utils = {
+    async process(array, fn, timeLimit = 9) {
+        let start = performance.now();
+        for (let i = 0; i < array.length; i++) {
+            await fn(array[i], i);
+            if (performance.now() - start > timeLimit) {
+                await new Promise(r => setTimeout(r, 0));
+                start = performance.now();
+            }
+        }
+    }
+};
+
+// --- UI LOGIC ---
+const App = {
+  state: { collapsed: new Set(), expanded: new Set(), diffCache: {}, editors: {} },
+  editor: null,
+  activeCm: null,
+  activeEditorId: null,
+  activeSaveCb: null,
+  isImporting: false, // Pause refresh
+
+  setMode(mode, silent = false) {
+      mode = 'browser'; localStorage.setItem('git_mode', mode);
+      if (mode === 'browser') {
+          CurrentGit = BrowserGit;
+          CurrentFS = BrowserFS;
+          document.getElementById('browser-controls').style.display = 'block';
+          // Update repo label
+          document.getElementById('current-repo').textContent = activeDir;
+          // UI.alert('Switched to Browser Mode (IndexedDB)');
+      } else {
+
+          document.getElementById('browser-controls').style.display = 'none';
+          document.getElementById('current-repo').textContent = activeDir;
+
+      }
+      this.refresh();
+  },
+
+  async openRepoDialog() {
+      const modal = document.getElementById('repo-modal');
+      const list = document.getElementById('repo-list');
+      list.innerHTML = 'Loading...';
+      modal.showModal();
+
+      try {
+          let dirs = [];
+          if (CurrentGit === BrowserGit) {
+              const files = await pf.readdir('/');
+              for (const f of files) {
+                  if (f === '.git') continue;
+                  const stat = await pf.stat('/' + f);
+                  if (stat.isDirectory()) dirs.push('/' + f);
+              }
+              try { await pf.stat('/.git'); dirs.unshift('/'); } catch(e) {}
+          }
+
+          list.innerHTML = '';
+          dirs.forEach(d => {
+              const btn = document.createElement('button');
+              btn.className = 'btn btn-neutral';
+              btn.textContent = d;
+              btn.style.textAlign = 'left';
+              btn.onclick = () => { App.switchRepo(d); modal.close(); };
+              if (d === activeDir || (activeDir === '' && d === '/')) {
+                  btn.style.background = 'var(--act)';
+                  btn.style.color = '#fff';
+              }
+              list.appendChild(btn);
+          });
+
+          if (dirs.length === 0) list.innerHTML = 'No repositories found.';
+      } catch(e) {
+          list.textContent = 'Error: ' + e.message;
+      }
+  },
+
+  switchRepo(path) {
+      activeDir = path;
+      localStorage.setItem('git_active_dir', path);
+      document.getElementById('current-repo').textContent = path;
+      this.refresh();
+  },
+
+  importDeviceFolder() {
+      document.getElementById('import-input-main').click();
+  },
+
+  async handleImport(input, isGitFolder) {
+      if (!input.files || input.files.length === 0) return;
+
+      this.isImporting = true;
+      const files = Array.from(input.files);
+
+      const pContainer = document.getElementById('repo-progress-container');
+      const pText = document.getElementById('repo-progress-text');
+      const pBar = document.getElementById('repo-progress-bar');
+      const debugEl = document.getElementById('import-debug');
+
+      pContainer.style.display = 'block';
+      if (localStorage.getItem('git_debug')) {
+          debugEl.style.display = 'block';
+      }
+      debugEl.textContent = '';
+
+      const log = (msg) => {
+          console.log(msg);
+          debugEl.textContent += msg + '\n';
+          debugEl.scrollTop = debugEl.scrollHeight;
+      };
+
+      pText.textContent = 'Analyzing folder structure...';
+      pBar.value = 0;
+
+      try {
+          // 1. Calculate Common Prefix (Async to be safe with large file counts)
+          // We need to find the path string that is common to ALL files.
+          let commonPrefix = decodeURIComponent(files[0].webkitRelativePath);
+          // Ensure we start with directory separators logic
+          if (commonPrefix.lastIndexOf('/') !== -1) {
+              commonPrefix = commonPrefix.substring(0, commonPrefix.lastIndexOf('/') + 1);
+          } else {
+              commonPrefix = '';
+          }
+
+          log(`Initial Prefix Candidate: "${commonPrefix}"`);
+
+          await Utils.process(files, (f) => {
+              const path = decodeURIComponent(f.webkitRelativePath);
+              while (commonPrefix && !path.startsWith(commonPrefix)) {
+                  // Shorten prefix by one directory segment
+                  if (commonPrefix.endsWith('/')) {
+                      commonPrefix = commonPrefix.slice(0, -1);
+                  }
+                  const lastSlash = commonPrefix.lastIndexOf('/');
+                  if (lastSlash !== -1) {
+                      commonPrefix = commonPrefix.substring(0, lastSlash + 1);
+                  } else {
+                      commonPrefix = '';
+                  }
+              }
+          });
+
+          log(`Final Common Prefix: "${commonPrefix}"`);
+
+          // 2. Determine Repo Name & Target
+          let targetDir = activeDir;
+
+          if (!isGitFolder) {
+              // Repo name is the last folder in the prefix
+              // e.g. "root/parent/RepoName/" -> "RepoName"
+              const segments = commonPrefix.split('/').filter(s => s);
+              let repoName = segments.pop() || 'imported-repo';
+
+              // If prefix was empty (files in root?), take name from first file?
+              // No, webkitRelativePath usually includes the container folder.
+              // If it's empty, something is weird, fallback to 'imported'.
+
+              targetDir = '/' + repoName;
+              log(`Target Dir: ${targetDir}`);
+          } else {
+              if (activeDir === '/') throw new Error('No active repo selected for .git import');
+              targetDir = activeDir + '/.git';
+              log(`Target .git Dir: ${targetDir}`);
+          }
+
+          // 3. Prepare FS
+          this.setMode('browser');
+          initIsoGit();
+          try { await pf.mkdir(targetDir); } catch(e) {}
+
+          // 4. Copy Files
+          let hasGitObj = false;
+
+          pText.textContent = isGitFolder ? 'Importing .git...' : 'Importing files...';
+
+          await Utils.process(files, async (file, i) => {
+              const rawPath = decodeURIComponent(file.webkitRelativePath);
+
+              // Strip Common Prefix to get internal path
+              // e.g. "Root/Repo/src/index.js" - "Root/Repo/" = "src/index.js"
+              let relPath = rawPath.substring(commonPrefix.length);
+
+              if (!relPath) return; // Is the root folder entry itself
+
+              let destPath = '';
+
+              if (isGitFolder) {
+                  // If we are importing INTO .git, relPath is the content inside .git
+                  // e.g. prefix=".../.git/", file=".../.git/config" -> relPath="config"
+                  // Target is ".../Repo/.git"
+                  destPath = targetDir + '/' + relPath;
+              } else {
+                  // Normal Import
+                  // Check if this is a git file included in the main import
+                  if (relPath.startsWith('.git/') || relPath === '.git') {
+                      hasGitObj = true;
+                      if (i < 3) log('(.git contents detected)');
+                      // It goes into the .git folder of the target
+                      // destPath: /Repo/.git/config
+                      // targetDir: /Repo
+                      destPath = targetDir + '/' + relPath;
+                  } else {
+                      // Regular file
+                      destPath = targetDir + '/' + relPath;
+                  }
+              }
+
+              if (i < 3) log(`Writing: ...${relPath} -> ${destPath}`);
+
+              // Ensure directories
+              const destParts = destPath.split('/');
+              destParts.pop();
+              let curr = '';
+              for (const p of destParts) {
+                  if (!p) continue;
+                  curr += '/' + p;
+                  try { await pf.mkdir(curr); } catch(e) {}
+              }
+
+              const buffer = await file.arrayBuffer();
+              await pf.writeFile(destPath, new Uint8Array(buffer));
+
+              if (i % 20 === 0) {
+                  pBar.value = (i / files.length) * 100;
+                  pText.textContent = `Importing: ${i}/${files.length}`;
+              }
+          });
+
+          pBar.value = 100;
+          input.value = '';
+          log(`Import finished. Files: ${files.length}`);
+
+          // 5. Post-Import Logic
+          if (isGitFolder) {
+              pText.textContent = '.git Import Complete!';
+              setTimeout(() => {
+                  pContainer.style.display = 'none';
+                  document.getElementById('repo-modal').close();
+                  this.isImporting = false;
+                  this.switchRepo(targetDir);
+              }, 1000);
+          } else {
+              activeDir = targetDir;
+              localStorage.setItem('git_active_dir', activeDir);
+              document.getElementById('current-repo').textContent = activeDir;
+
+              if (hasGitObj) {
+                  pText.textContent = 'Import Complete (.git found)!';
+                  setTimeout(() => {
+                      pContainer.style.display = 'none';
+                      document.getElementById('repo-modal').close();
+                      this.isImporting = false;
+                      this.switchRepo(targetDir);
+                  }, 1000);
+              } else {
+                  pText.textContent = 'Checking for .git...';
+                  const choice = await UI.choose(
+                      `No .git folder found in "${targetDir}".\n\nIt might be hidden.`,
+                      [
+                          {label: 'Select .git folder', value: 'select', class: 'btn-primary'},
+                          {label: 'Initialize New Repo', value: 'init', class: 'btn-neutral'}
+                      ]
+                  );
+
+                  if (choice === 'select') {
+                      pText.textContent = 'Please select the .git folder...';
+                      document.getElementById('import-input-git').click();
+                  } else if (choice === 'init') {
+                      pText.textContent = 'Initializing...';
+                      await git.init({ fs, dir: activeDir });
+                      pText.textContent = 'Initialized!';
+                      setTimeout(() => {
+                          pContainer.style.display = 'none';
+                          document.getElementById('repo-modal').close();
+                          this.isImporting = false;
+                          this.switchRepo(targetDir);
+                      }, 1000);
+                  } else {
+                      pContainer.style.display = 'none';
+                      document.getElementById('repo-modal').close();
+                      this.isImporting = false;
+                      this.switchRepo(targetDir);
+                  }
+              }
+          }
+
+      } catch (e) {
+          this.isImporting = false;
+          pText.textContent = 'Error: ' + e.message;
+          pText.style.color = 'red';
+          log('Error: ' + e.message);
+          console.error(e);
+      }
+  },
+
+  async openDeviceFolder() {
+      try {
+          const handle = await window.showDirectoryPicker();
+          const repoName = handle.name;
+          const targetDir = '/' + repoName;
+
+          // Check if exists
+          try {
+              const stat = await pf.stat(targetDir);
+              if (stat.isDirectory()) {
+                  if (!await UI.confirm(`Repo "${repoName}" already exists. Overwrite/Merge?`)) return;
+              }
+          } catch(e) {}
+
+          document.getElementById('repo-modal').close();
+
+          // Start Import Process
+          // We use the existing progress UI
+          // Switch to browser mode to ensure UI is ready
+          this.setMode('browser');
+          const progressEl = document.getElementById('browser-progress');
+          progressEl.style.display = 'block';
+          progressEl.textContent = `Importing "${repoName}"...`;
+
+          // Recursive Copy Function
+          let count = 0;
+          const copyDir = async (dirHandle, path) => {
+              // Create dir in LightningFS
+              try { await pf.mkdir(path); } catch(e) {}
+
+              for await (const [name, entry] of dirHandle.entries()) {
+                  const destPath = path + '/' + name;
+                  if (entry.kind === 'file') {
+                      const file = await entry.getFile();
+                      // Read as ArrayBuffer to handle binary files (like .git objects) correctly
+                      const buffer = await file.arrayBuffer();
+                      await pf.writeFile(destPath, new Uint8Array(buffer));
+                      count++;
+                      if (count % 10 === 0) progressEl.textContent = `Importing ${repoName}: ${count} files...`;
+                  } else if (entry.kind === 'directory') {
+                      await copyDir(entry, destPath);
+                  }
+              }
+          };
+
+          await copyDir(handle, targetDir);
+
+          // Set Active
+          activeDir = targetDir;
+          localStorage.setItem('git_active_dir', activeDir);
+          activeFS = null; // Ensure we use LightningFS
+
+          progressEl.textContent = 'Import Complete!';
+          setTimeout(() => progressEl.style.display = 'none', 5000);
+
+          document.getElementById('current-repo').textContent = activeDir;
+          this.refresh();
+
+      } catch(e) {
+          if (e.name !== 'AbortError') UI.alert('Import Error: ' + e.message);
+      }
+  },
+
+  async cloneFromDialog() {
+      const url = document.getElementById('new-repo-url').value;
+      if (!url) return UI.alert('URL required');
+
+      // Do NOT close modal yet, we want to show progress inside it
+      // document.getElementById('repo-modal').close();
+
+      // Show progress container
+      const pContainer = document.getElementById('repo-progress-container');
+      const pText = document.getElementById('repo-progress-text');
+      const pBar = document.getElementById('repo-progress-bar');
+      pContainer.style.display = 'block';
+      pBar.removeAttribute('value'); // Indeterminate initially
+      pText.textContent = `Starting clone...`;
+
+      // Pass URL directly to command
+      const r = await Git.run('clone-browser', url);
+
+      if (!r.ok) {
+          pText.textContent = 'Error: ' + r.text;
+          pText.style.color = 'red';
+          console.error('Clone failed:', r);
+          await UI.alert('Clone Failed: ' + r.text); // Alert error to ensure visibility
+      } else {
+          pText.textContent = 'Success!';
+          pBar.value = 100;
+          setTimeout(() => {
+              document.getElementById('repo-modal').close();
+              pContainer.style.display = 'none';
+              // Extract repo name for UI update
+              const repoName = url.split('/').pop().replace('.git', '') || 'repo';
+              document.getElementById('current-repo').textContent = '/' + repoName;
+              this.refresh();
+          }, 1000);
+      }
+  },
+
+  async resetStorage() {
+      if (!await UI.confirm('ARE YOU SURE? This will delete ALL cloned repositories and local changes in the browser. This cannot be undone.')) return;
+
+      try {
+          // Clear Preferences
+          localStorage.removeItem('git_mode');
+          localStorage.removeItem('git_active_dir');
+
+          // Delete IndexedDB
+          // LightningFS uses 'fs' as default name
+          const req = indexedDB.deleteDatabase('fs');
+          req.onsuccess = () => {
+              alert('Storage Cleared. Reloading...');
+              window.location.reload();
+          };
+          req.onerror = () => {
+              alert('Error deleting DB: ' + req.error);
+              window.location.reload();
+          };
+          req.onblocked = () => {
+              alert('Delete blocked. Close other tabs and try again.');
+          };
+      } catch(e) {
+          alert('Error: ' + e.message);
+      }
+  },
+
+  setActive(cm, mode, saveCb, id) {
+      this.activeCm = cm;
+      this.activeSaveCb = saveCb;
+      this.activeEditorId = id;
+      const tb = document.querySelector('.editor-toolbar');
+      tb.classList.remove('hidden');
+
+      if (mode === 'fullscreen') document.body.classList.add('mode-fullscreen');
+      else document.body.classList.remove('mode-fullscreen');
+  },
+
+  activeSave() {
+      if (this.activeSaveCb) this.activeSaveCb();
+  },
+
+  async tryAI() { var q;
+      if (!(q = await UI.prompt(`What changes do you want AI to try to make to this file?`))){ return }
+      if(!App.activeCm){ return }
+      var a = await AI.code(q, App.activeCm.getValue(), this.filepath());
+      console.log("AI REPLY", a);
+      return;
+      try{ await navigator.clipboard.writeText(a) }catch(e){}
+  },
+  filepath(){
+    return App.activeCm.getTextArea().parentNode.parentNode.pathname || document.getElementById('file-select').value
+  },
+
+  adjustScroll(cm, targetPos) {
+      if (!cm) return;
+      const pos = targetPos || cm.getCursor('head');
+      const OFFSET = 200; // ~4em
+
+      if (cm.getOption("viewportMargin") === Infinity) {
+          // Inline: Scroll Main
+          const winCoords = cm.charCoords(pos, 'window');
+          const diff = winCoords.top - OFFSET;
+          const main = document.getElementById('main');
+          if (Math.abs(diff) > 5) main.scrollBy(0, diff); // Threshold to prevent jitter
+      } else {
+          // Fullscreen: Scroll Editor
+          const coords = cm.charCoords(pos, 'local');
+          cm.scrollTo(null, coords.top - OFFSET);
+      }
+  },
+
+  toggleSelection() {
+    const cm = this.activeCm;
+    if (!cm) return;
+
+    const sel = cm.listSelections()[0];
+
+    // Check if continuation (selection matches last set)
+    const isContinuation = this.lastCopySel &&
+        sel.anchor.line === this.lastCopySel.anchor.line &&
+        sel.anchor.ch === this.lastCopySel.anchor.ch &&
+        sel.head.line === this.lastCopySel.head.line &&
+        sel.head.ch === this.lastCopySel.head.ch;
+
+    // Initialize state if not continuation
+    if (!isContinuation) {
+        this.lastPivot = cm.getCursor('head');
+
+        if (cm.somethingSelected()) {
+             // User entered with selection (e.g. Double Tap Word)
+             // Start from Level 0 (Word)
+             this.copyLevel = 0;
+        } else {
+             // User entered with empty caret
+             // Start from scratch
+             this.copyLevel = -1;
+        }
+    }
+
+    // Increment Level
+    this.copyLevel = (this.copyLevel + 1) % 5;
+
+    const pivot = this.lastPivot;
+    const opts = {scroll: false};
+
+    // Helper to keep head (cursor) close to pivot to minimize jumping
+    const setSel = (start, end) => {
+        const s = (start.line < end.line) || (start.line === end.line && start.ch <= end.ch) ? start : end;
+        const e = (s === start) ? end : start;
+
+        const distStart = Math.abs(s.line - pivot.line);
+        const distEnd = Math.abs(e.line - pivot.line);
+
+        if (distStart < distEnd) {
+            cm.setSelection(e, s, opts); // head at start
+        } else {
+            cm.setSelection(s, e, opts); // head at end
+        }
+    };
+
+    if (this.copyLevel === 0) { // Word
+         const word = cm.findWordAt(pivot);
+         setSel(word.anchor, word.head);
+    } else if (this.copyLevel === 1) { // Sentence
+         try {
+           const punc = /[.!?](\s|$)|^\s*$/;
+           let start = {line: 0, ch: 0};
+           const sc1 = cm.getSearchCursor(punc, pivot);
+           if (sc1.findPrevious()) start = sc1.to();
+           let end = {line: cm.lineCount()-1, ch: 1e9};
+           const sc2 = cm.getSearchCursor(punc, pivot);
+           if (sc2.findNext()) end = sc2.to();
+           setSel(start, end);
+         } catch(e) {
+           const line = pivot.line;
+           setSel({line, ch:0}, {line: line+1, ch:0});
+         }
+    } else if (this.copyLevel === 2) { // Paragraph (Block)
+         let start = pivot.line;
+         let end = pivot.line;
+         const last = cm.lineCount();
+         while(start > 0 && cm.getLine(start-1).trim()) start--;
+         while(end < last && cm.getLine(end).trim()) end++;
+         setSel({line: start, ch:0}, {line: end, ch:0});
+    } else if (this.copyLevel === 3) { // All
+         const lastLine = cm.lineCount() - 1;
+         const lastCh = cm.getLine(lastLine).length;
+         setSel({line: 0, ch: 0}, {line: lastLine, ch: lastCh});
+    } else if (this.copyLevel === 4) { // Reset (Empty at pivot)
+         cm.setSelection(pivot, pivot, opts);
+         this.lastCopySel = null; // Force reset next time
+         // Also force scroll to pivot
+         this.adjustScroll(cm, pivot);
+         return;
+    }
+
+    // Always adjust scroll to pivot during toggling
+    this.adjustScroll(cm, pivot);
+    this.lastCopySel = cm.listSelections()[0];
+  },
+
+  async copyActive() {
+    this.toggleSelection();
+
+    const cm = this.activeCm;
+    if (!cm) return;
+    const text = cm.getSelection();
+    if (text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        document.execCommand('copy');
+      }
+    }
+  },
+
+  async pasteActive() {
+    const cm = this.activeCm;
+    if (!cm) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      cm.replaceSelection(text);
+      cm.focus();
+    } catch (err) {
+       // Try execCommand? No, paste is restricted.
+       // Just focus and let them paste manually?
+       cm.focus();
+       // alert('Use Ctrl+V or Long Press');
+    }
+  },
+
+  insertActive(text) {
+      this.insert(this.activeCm, text);
+  },
+
+  checkHideToolbar() {
+      setTimeout(() => {
+          const focused = document.activeElement;
+          const isEditor = focused && focused.closest && (focused.closest('.CodeMirror') || focused.closest('.editor-toolbar'));
+          if (!isEditor) {
+              document.querySelector('.editor-toolbar').classList.add('hidden');
+          }
+      }, 200);
+  },
+
+  find(query, next) {
+      // 1. Resolve Editor
+      let editor = this.activeCm;
+
+      // Recovery: If active editor is missing or destroyed (DOM disconnected)
+      if (!editor || (editor.getWrapperElement && !editor.getWrapperElement().isConnected)) {
+          if (this.activeEditorId === '__MAIN__') {
+              editor = this.editor;
+          } else if (this.activeEditorId && this.state.editors[this.activeEditorId]) {
+              editor = this.state.editors[this.activeEditorId];
+          }
+          // If recovered, update reference
+          if (editor && editor.getWrapperElement().isConnected) {
+              this.activeCm = editor;
+          }
+      }
+      // Fallback default
+      if (!editor) editor = this.editor;
+
+      const box = document.getElementById('find-box');
+      if (!query || !editor) {
+          if(box) box.style.background = '#f2f2f7';
+          return;
+      }
+      if (!editor.getSearchCursor) return UI.alert('Search addon missing');
+
+      // If next (Enter), start from END of current selection to find next.
+      // If typing (Live), start from START of current selection to expand/refine match.
+      let start = next ? editor.getCursor('to') : editor.getCursor('from');
+
+      let cursor = editor.getSearchCursor(query, start, {caseFold: true});
+      let found = cursor.findNext();
+
+      // Wrap around
+      if (!found) {
+          cursor = editor.getSearchCursor(query, {line: 0, ch: 0}, {caseFold: true});
+          found = cursor.findNext();
+      }
+
+      if (!found) {
+          if(box) box.style.background = '#ffcccc';
+          return;
+      }
+      if(box) box.style.background = '#f2f2f7';
+
+      const from = cursor.from();
+      const to = cursor.to();
+
+      editor.setSelection(from, to);
+      this.scrollToMatch(editor, from);
+
+      const marker = editor.markText(from, to, {className: 'flash-highlight'});
+      setTimeout(() => marker.clear(), 5000);
+
+      // Never steal focus back automatically
+  },
+
+  scrollToMatch(editor, pos) {
+      // 5em approx 100px (body 20pt * 5)
+      const OFFSET = 100;
+
+      if (editor.getOption("viewportMargin") === Infinity) {
+          // Inline Editor: Scroll Page
+          const coords = editor.charCoords(pos, "window");
+          const diff = coords.top - OFFSET;
+          const main = document.getElementById('main');
+          main.scrollBy(0, diff);
+      } else {
+          // Fullscreen Editor: Scroll Editor
+          const coords = editor.charCoords(pos, "local");
+          editor.scrollTo(null, coords.top - OFFSET);
+      }
+  },
+
+  insert(cm, text) {
+      const editor = cm || this.activeCm;
+      if(!editor) return;
+      editor.replaceSelection(text);
+      editor.focus();
+  },
+
+  inRange(pos, start, end) {
+       const s = (start.line < end.line) || (start.line === end.line && start.ch <= end.ch) ? start : end;
+       const e = (s === start) ? end : start;
+       if (pos.line < s.line || pos.line > e.line) return false;
+       if (pos.line === s.line && pos.ch < s.ch) return false;
+       if (pos.line === e.line && pos.ch > e.ch) return false;
+       return true;
+  },
+
+  setupEditor(cm) {
+    // --- Tap Handling ---
+    const handleTapStart = (cm) => {
+        this.preTapSel = cm.listSelections()[0];
+        this.isTap = true;
+    };
+    cm.on('mousedown', handleTapStart);
+    cm.on('touchstart', handleTapStart);
+
+    cm.on('cursorActivity', (cm) => {
+        if (this.isTap) {
+            this.isTap = false;
+
+            const old = this.preTapSel;
+            const curr = cm.listSelections()[0];
+
+            if (!old || !curr) return;
+
+            const wasSelected = Math.abs(old.anchor.line - old.head.line) > 0 || old.anchor.ch !== old.head.ch;
+            const isCaret = curr.anchor.line === curr.head.line && curr.anchor.ch === curr.head.ch;
+
+            if (wasSelected && isCaret) {
+                if (App.inRange(curr.head, old.anchor, old.head)) {
+                    cm.setSelection(old.anchor, old.head);
+                    App.toggleSelection();
+                }
+            }
+        }
+    });
+
+    // --- Mobile Bracket Hack ---
+    // CM5 autoCloseBrackets often fails on mobile keyboards (composition/input events vs keypress)
+    cm.on("inputRead", (cm, change) => {
+        if (change.origin !== "+input") return;
+        const text = change.text[0];
+        const pairs = {
+            "(": ")", "{": "}", "[": "]",
+            "'": "'", '"': '"'
+        };
+
+        if (pairs[text]) {
+            const cur = cm.getCursor();
+            const line = cm.getLine(cur.line);
+            const nextChar = line.charAt(cur.ch);
+
+            // If the addon worked, nextChar is already the closer
+            if (nextChar === pairs[text]) return;
+
+            // Quote Context Check: Don't close if preceded by word char (e.g. don't)
+            if (text === "'" || text === '"') {
+                const prevChar = line.charAt(cur.ch - 2);
+                if (/\w/.test(prevChar)) return;
+            }
+
+            cm.replaceRange(pairs[text], cur);
+            cm.setCursor(cur);
+        }
+    });
+  },
+
+  init() {
+    this.editor = CodeMirror.fromTextArea(document.getElementById('cm-source'), {
+      lineNumbers: true, mode: 'javascript', lineWrapping: true,
+      dragDrop: false, // Prevent touch drag scrambling
+      autoCloseBrackets: true
+    });
+
+    this.setupEditor(this.editor);
+
+    this.editor.on('focus', () => this.setActive(this.editor, 'fullscreen', () => this.saveFile(), '__MAIN__'));
+    this.editor.on('blur', () => this.checkHideToolbar());
+
+    document.getElementById('find-box').addEventListener('blur', function() {
+        setTimeout(() => { this.value = ''; }, 5000);
+    });
+
+    // Auto-detect server mode (Default to Server if not set)
+    const mode = 'browser';
+    if (mode === 'browser') {
+        initIsoGit();
+        setTimeout(() => this.setMode('browser', true), 100);
+    } else {
+        setTimeout(() => this.setMode('server', true), 100);
+    }
+
+    // Restore Debug State
+    if (localStorage.getItem('git_debug')) {
+        const toggle = document.getElementById('debug-toggle');
+        if (toggle) toggle.checked = true;
+        App.toggleDebug(true);
+    }
+
+    // Auto-refresh visibility logic
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.refresh();
+    });
+
+    // Visual Viewport resize handler for Toolbar & Scroll
+    if (window.visualViewport) {
+      const handler = () => {
+         const tb = document.querySelector('.editor-toolbar');
+         if (tb) {
+             const offset = window.innerHeight - (window.visualViewport.height + window.visualViewport.offsetTop);
+             tb.style.bottom = `${Math.max(0, offset)}px`;
+         }
+         // Keep caret visible
+         if (App.activeCm) App.adjustScroll(App.activeCm);
+      };
+      window.visualViewport.addEventListener('resize', handler);
+      window.visualViewport.addEventListener('scroll', handler);
+    }
+  },
+
+  tab(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(name+'-view').classList.add('active');
+    if (name === 'review') this.refresh();
+  },
+
+  async runGit(cmd) {
+      if (!await UI.confirm(`Confirm ${cmd}?`)) return;
+      const r = await Git.run(cmd);
+      await UI.alert((r.ok ? 'Success: ' : 'Error: ') + (r.text || cmd));
+      if (r.ok) this.refresh();
+  },
+
+  async commit() {
+      const msg = document.getElementById('commit-msg').value;
+      if (!msg) return UI.alert('Message required');
+
+      if (!await UI.confirm('Commit selected changes?')) return;
+
+      // Stage all changes first to ensure single commit
+      // await Git.run('add', '.');
+
+      const r = await Git.run('commit', '-m', msg);
+      if (r.ok) {
+          await UI.alert('Commit Successful');
+          document.getElementById('commit-msg').value = '';
+          this.refresh();
+      }
+      else await UI.alert('Commit Failed:\n' + r.text);
+  },
+
+  // --- Editor Logic ---
+  async openEditor() {
+      document.getElementById('editor-overlay').classList.add('active');
+      setTimeout(() => this.editor.focus(), 50);
+      const files = await Git.listFiles();
+
+      // DEBUG: If no files found, alert user to help debug import issues
+      if (files.length === 0 && CurrentGit === BrowserGit) {
+          UI.alert(`Debug: No files found in index.\nActive Dir: ${activeDir}\n\nDid the import finish? Check debug log.`);
+      }
+
+      const sel = document.getElementById('file-select');
+      sel.innerHTML = '<option value="">Select File...</option><option value="__NEW__">+ New File</option>';
+      files.forEach(f => {
+          const o = document.createElement('option');
+          o.value = o.text = f;
+          sel.appendChild(o);
+      });
+  },
+
+  closeEditor() {
+      document.getElementById('editor-overlay').classList.remove('active');
+      this.refresh();
+  },
+
+  async loadEditor(path) {
+      if (path === '__NEW__') {
+          const name = await UI.prompt('File path:');
+          if (!name) return;
+          path = name;
+          const sel = document.getElementById('file-select');
+          const o = document.createElement('option');
+          o.value = o.text = path;
+          o.selected = true;
+          sel.appendChild(o);
+          // this.editor.setValue('');
+      } else if (path) {
+          const txt = await FS.read(path);
+          this.editor.setValue(txt);
+      }
+
+      let mode = 'javascript';
+      if (path.match(/\.html?$/)) mode = 'htmlmixed';
+      else if (path.match(/\.css$/)) mode = 'css';
+      else if (path.match(/\.py$/)) mode = 'python';
+      else if (path.match(/\.(sh|bash|zsh)$/)) mode = 'shell';
+      else if (path.match(/\.(md|markdown)$/)) mode = 'markdown';
+      else if (path.match(/\.(xml|svg)$/)) mode = 'xml';
+      else if (path.match(/\.(c|cpp|h|java|cs)$/)) mode = 'clike';
+
+      this.editor.setOption('mode', mode);
+  },
+
+  async saveFile() {
+      const path = document.getElementById('file-select').value;
+      if (!path || path === '__NEW__') return UI.alert('Select a file');
+      await FS.write(path, this.editor.getValue());
+      await Git.run(['add', path]);
+      this.closeEditor();
+  },
+
+  find(query, next) {
+      const editor = this.activeCm || this.editor;
+      const box = document.getElementById('find-box');
+      if (!query || !editor) {
+          if(box) box.style.background = '#f2f2f7';
+          return;
+      }
+      if (!editor.getSearchCursor) return UI.alert('Search addon missing');
+
+      // If next (Enter), start from END of current selection to find next.
+      // If typing (Live), start from START of current selection to expand/refine match.
+      let start = next ? editor.getCursor('to') : editor.getCursor('from');
+
+      let cursor = editor.getSearchCursor(query, start, {caseFold: true});
+      let found = cursor.findNext();
+
+      // Wrap around
+      if (!found) {
+          cursor = editor.getSearchCursor(query, {line: 0, ch: 0}, {caseFold: true});
+          found = cursor.findNext();
+      }
+
+      if (!found) {
+          if(box) box.style.background = '#ffcccc';
+          return;
+      }
+      if(box) box.style.background = '#f2f2f7';
+
+      const from = cursor.from();
+      const to = cursor.to();
+
+      editor.setSelection(from, to);
+      this.scrollToMatch(editor, from);
+
+      const marker = editor.markText(from, to, {className: 'flash-highlight'});
+      setTimeout(() => marker.clear(), 50000);
+
+      // Keep focus in input if live searching, otherwise (Enter) assume user might want to edit?
+      // User asked: "The search box should stay in Focus until we tap out of it"
+      // So basically NEVER steal focus back to editor automatically.
+  },
+
+  scrollToMatch(editor, pos) {
+      // 5em approx 100px (body 20pt * 5)
+      const OFFSET = 100;
+
+      if (editor.getOption("viewportMargin") === Infinity) {
+          // Inline Editor: Scroll Page
+          // We need absolute position of the line in the document
+          // editor.charCoords(pos, "window") gives viewport coords.
+          // But scrolling changes viewport coords.
+          // We want to scroll MAIN so that line is at 100px from top.
+          // rect.top is position relative to viewport top.
+          // We want new rect.top to be 100.
+          // diff = current_rect.top - 100.
+          // Scroll main by diff.
+
+          const coords = editor.charCoords(pos, "window");
+          const diff = coords.top - OFFSET;
+          const main = document.getElementById('main');
+          main.scrollBy(0, diff);
+      } else {
+          // Fullscreen Editor: Scroll Editor
+          // charCoords(pos, "local") gives pos relative to editor top (scroller).
+          const coords = editor.charCoords(pos, "local");
+          editor.scrollTo(null, coords.top - OFFSET);
+      }
+  },
+
+  insert(cm, text) {
+      const editor = cm || this.activeCm;
+      if(!editor) return;
+      editor.replaceSelection(text);
+      editor.focus();
+  },
+
+  async refresh(isManual = false) {
+    if (this.isImporting) return;
+
+    // 1. Capture State
+    const mainEl = document.getElementById('main');
+    const scrollTop = mainEl.scrollTop;
+    const activePath = this.activeEditorId;
+    let activeCursor = null;
+    if (this.activeCm && activePath && activePath !== '__MAIN__') {
+        try { activeCursor = this.activeCm.getCursor(); } catch(e) {}
+    }
+
+    const st = await Git.run(['status', '-z']);
+    if (!st.ok) return;
+
+    const entries = st.text.split('\0').filter(x => x);
+    const files = {};
+    const stagedList = [];
+
+    // Async loop for entries
+    await Utils.process(entries, (line) => {
+        const x = line[0], y = line[1];
+        const path = decodeURIComponent(line.substring(3)); // Decode path
+        if (!files[path]) files[path] = { path, staged: false, unstaged: false };
+        if (x !== ' ' && x !== '?') files[path].staged = true;
+        if (y !== ' ') files[path].unstaged = true;
+        if (files[path].staged) stagedList.push(path);
+    });
+
+    const [dStaged, dUnstaged] = await Promise.all([
+        Git.run(['diff', '--cached']),
+        Git.run(['diff'])
+    ]);
+
+    const untrackedDiffs = [];
+    const fileKeys = Object.keys(files);
+
+    // Async loop for untracked diff generation
+    await Utils.process(fileKeys, async (p) => {
+       const f = files[p];
+       if (f.unstaged && !f.staged && entries.find(e => e.includes(p) && e.startsWith('??'))) {
+           const content = await FS.read(p);
+           untrackedDiffs.push(`diff --git a/${p} b/${p}\n--- /dev/null\n+++ b/${p}\n@@ -0,0 +1,${content.split('\n').length} @@\n${content.split('\n').map(l => '+'+l).join('\n')}`);
+       }
+    });
+
+    const listEl = document.getElementById('file-list');
+    listEl.innerHTML = '';
+
+    if (localStorage.getItem('git_debug')) {
+        this.log('--- DEBUG: Raw Diff Output ---');
+        this.log({staged: dStaged.text, unstaged: dUnstaged.text});
+    }
+
+    const allDiffs = [
+       ...Diff2Html.parse(dStaged.text),
+       ...Diff2Html.parse(dUnstaged.text),
+       ...Diff2Html.parse(untrackedDiffs.join('\n'))
+    ];
+
+    if (localStorage.getItem('git_debug')) {
+        this.log('--- DEBUG: Parsed Diffs ---');
+        this.log(allDiffs);
+    }
+
+    const fileDiffs = {};
+    // Async loop for diff parsing
+    await Utils.process(allDiffs, (d) => {
+        let name = d.newName.replace(/^b\//, '') || d.oldName.replace(/^a\//, '');
+        name = decodeURIComponent(name); // Fix for encoded paths
+
+        if (localStorage.getItem('git_debug')) this.log(`Caching Diff: RawName="${d.newName}" -> Key="${name}"`);
+
+        if (!fileDiffs[name]) fileDiffs[name] = [];
+        fileDiffs[name].push(d);
+    });
+    this.state.diffCache = fileDiffs;
+    this.state.editors = {}; // Reset editors on full refresh
+
+    const sortedFiles = Object.keys(files).sort();
+
+    if (sortedFiles.length === 0) {
+        const source = (CurrentGit === BrowserGit) ? activeDir : 'server';
+        listEl.innerHTML = `<div style="text-align:center;color:#999;margin-top:50px">No changes for ${source}</div>`;
+        document.getElementById('commit-box').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('commit-box').style.display = 'block';
+    const cmBox = document.getElementById('commit-msg');
+    if(!cmBox.value) cmBox.value = stagedList.length ? `Update ${stagedList.join(', ')}` : '';
+
+    // Async loop for rendering cards
+    await Utils.process(sortedFiles, async (name) => {
+        const f = files[name];
+        const card = document.createElement('div');
+        card.filepath = name;
+
+        // Ensure new files start collapsed
+        if (!this.state.collapsed.has(name) && !this.state.expanded?.has(name)) {
+             this.state.collapsed.add(name);
+        }
+
+        const collapsedClass = this.state.collapsed.has(name) ? 'collapsed' : '';
+
+        card.className = `file-card ${collapsedClass}`;
+        card.id = `card-${name.replace(/\W/g, '-')}`;
+
+        const header = document.createElement('div');
+        header.className = 'file-header';
+
+        const headerTitle = document.createElement('div');
+        headerTitle.style = 'flex:1; display:flex; align-items:center; overflow:hidden; gap:1em; min-width:0;';
+        headerTitle.onclick = (e) => {
+             if (e.target.closest('.stage-toggle') || e.target.closest('.btn-save-header')) return;
+             App.toggleCard(name, card);
+        };
+
+        const check = document.createElement('div');
+        check.className = `stage-toggle ${f.staged ? 'checked' : ''}`;
+        check.innerHTML = '&#10003;';
+        check.onclick = async () => {
+             if (f.staged) await Git.run(['reset', name]);
+             else await Git.run(['add', name]);
+             this.refresh(true); // Manual trigger
+        };
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'file-name';
+        nameDiv.style = 'direction:rtl; text-align:left; flex:1;';
+        nameDiv.textContent = name; // Already decoded
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-save-header btn-neutral';
+        saveBtn.textContent = 'Save';
+        saveBtn.onclick = (e) => { e.stopPropagation(); App.saveCard(name); };
+
+        const chevron = document.createElement('div');
+        chevron.className = 'chevron';
+        chevron.innerHTML = '&#9660;';
+
+        headerTitle.appendChild(check);
+        headerTitle.appendChild(nameDiv);
+        headerTitle.appendChild(saveBtn);
+        headerTitle.appendChild(chevron);
+
+        header.appendChild(headerTitle);
+        header.appendChild(document.createElement('div')); // Placeholder for flex alignment if needed
+        card.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'file-content';
+        card.appendChild(content);
+
+        listEl.appendChild(card);
+
+        // Lazy load: Only mount if NOT collapsed
+        if (!collapsedClass) {
+            await this.mountDiffEditor(name, card);
+        }
+    });
+
+    // 2. Restore State
+    mainEl.scrollTop = scrollTop;
+
+    // 3. Re-link Active Editor
+    if (activePath && activePath !== '__MAIN__' && this.state.editors[activePath]) {
+        this.activeCm = this.state.editors[activePath];
+        if (activeCursor) {
+            this.activeCm.setCursor(activeCursor);
+        }
+    }
+  },
+
+  async toggleCard(name, card) {
+      const isCollapsed = card.classList.contains('collapsed');
+      if (isCollapsed) {
+          // EXPAND
+          card.classList.remove('collapsed');
+          this.state.collapsed.delete(name);
+          this.state.expanded.add(name); // Track expansion
+
+          // Lazy Mount: Only mount if not already there
+          if (!this.state.editors[name]) {
+              await this.mountDiffEditor(name, card);
+          } else {
+              this.state.editors[name].refresh();
+          }
+      } else {
+          // COLLAPSE
+          card.classList.add('collapsed');
+          this.state.collapsed.add(name);
+          this.state.expanded.delete(name);
+      }
+  },
+
+  detectSwipe(el, action) {
+      let x0 = 0, y0 = 0;
+      el.addEventListener('touchstart', e => {
+          x0 = e.touches[0].clientX;
+          y0 = e.touches[0].clientY;
+      }, {passive: true});
+      el.addEventListener('touchend', e => {
+          const dx = e.changedTouches[0].clientX - x0;
+          const dy = e.changedTouches[0].clientY - y0;
+          if (Math.abs(dx) > 50 && Math.abs(dy) < 30) { // Horizontal swipe
+              action(e.changedTouches[0]);
+          }
+      });
+  },
+
+  async mountDiffEditor(name, card) {
+      const contentDiv = card.querySelector('.file-content');
+      // If already mounted, don't clear
+      if (this.state.editors[name]) return;
+
+      // 1. Get Diff Data & File Content
+      const diffs = this.state.diffCache[name];
+      if (!diffs) { contentDiv.textContent = 'No diff data'; return; }
+
+      let text = '';
+      try { text = await FS.read(name); }
+      catch(e) { text = ''; } // Deleted file?
+
+      // 2. Setup CodeMirror
+      const ta = document.createElement('textarea');
+      contentDiv.appendChild(ta);
+
+      const cm = CodeMirror.fromTextArea(ta, {
+          lineNumbers: true, mode: 'javascript', lineWrapping: true,
+          viewportMargin: Infinity, // Ensure height grows
+          dragDrop: false,
+          autoCloseBrackets: true
+      });
+      cm.setValue(text);
+      cm.clearHistory(); // Prevent undoing to empty
+      this.state.editors[name] = cm;
+
+      // 3. Mode Detection
+      let mode = 'javascript';
+      if (name.match(/\.html?$/)) mode = 'htmlmixed';
+      else if (name.match(/\.css$/)) mode = 'css';
+      else if (name.match(/\.py$/)) mode = 'python';
+      cm.setOption('mode', mode);
+
+      App.setupEditor(cm);
+
+      cm.on('focus', () => App.setActive(cm, 'review', () => App.saveCard(name), name));
+      cm.on('blur', () => App.checkHideToolbar());
+
+      // 4. Calculate Visible Ranges & Widgets
+      const visibleLines = new Set();
+      const widgets = [];
+      const adds = [];
+      const charHighlights = [];
+
+      const escapeHtml = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      const getCommon = (s1, s2) => {
+          let pre = 0;
+          while(pre < s1.length && pre < s2.length && s1[pre] === s2[pre]) pre++;
+          let suf = 0;
+          while(suf < s1.length - pre && suf < s2.length - pre && s1[s1.length - 1 - suf] === s2[s2.length - 1 - suf]) suf++;
+          return [pre, suf];
+      };
+
+      // Async diff rendering
+      await Utils.process(diffs, (block) => {
+         block.blocks.forEach(hunk => {
+             let currentLine = (hunk.newStartLine || 1) - 1;
+             let pendingDel = null;
+
+             hunk.lines.forEach(l => {
+                 const char = l.content.charAt(0);
+                 if (char === ' ') {
+                     visibleLines.add(currentLine);
+                     pendingDel = null;
+                     currentLine++;
+                 } else if (char === '+') {
+                     visibleLines.add(currentLine);
+                     adds.push(currentLine);
+
+                     // Diff against pending delete
+                     if (pendingDel) {
+                         const delText = pendingDel.content.substring(1);
+                         const addText = l.content.substring(1);
+                         const [pre, suf] = getCommon(delText, addText);
+
+                         if (delText.length - suf > pre || addText.length - suf > pre) {
+                             // Highlight Del
+                             const w = widgets[widgets.length - 1];
+                             w.html = '-' + escapeHtml(delText.substring(0, pre)) +
+                                      `<span class="char-del">${escapeHtml(delText.substring(pre, delText.length - suf))}</span>` +
+                                      escapeHtml(delText.substring(delText.length - suf));
+
+                             // Highlight Add
+                             if (addText.length - suf > pre) {
+                                 charHighlights.push({
+                                     line: currentLine,
+                                     from: {line: currentLine, ch: pre},
+                                     to: {line: currentLine, ch: addText.length - suf}
+                                 });
+                             }
+                         }
+                         pendingDel = null;
+                     }
+
+                     currentLine++;
+                 } else if (char === '-') {
+                     pendingDel = { content: l.content };
+                     widgets.push({ line: currentLine, content: l.content });
+                     visibleLines.add(currentLine);
+                 }
+             });
+         });
+      });
+
+      // 5. Hide Lines (Fold)
+      const lastLine = cm.lineCount();
+      let hideStart = null;
+
+      const doHide = (from, to) => {
+         if (from >= to) return;
+         cm.markText({line: from, ch:0}, {line: to, ch:0}, {
+             collapsed: true,
+             inclusiveLeft: true, inclusiveRight: true
+         });
+      };
+
+      for (let i = 0; i < lastLine; i++) {
+          if (!visibleLines.has(i)) {
+              if (hideStart === null) hideStart = i;
+          } else {
+              if (hideStart !== null) {
+                  doHide(hideStart, i);
+                  hideStart = null;
+              }
+          }
+      }
+      if (hideStart !== null) doHide(hideStart, lastLine);
+
+      // 6. Apply Widgets & Styles
+      widgets.forEach(w => {
+          const el = document.createElement('div');
+          el.className = 'line-del-widget';
+          if (w.html) el.innerHTML = w.html;
+          else el.textContent = w.content;
+
+          cm.addLineWidget(w.line, el, { above: true, coverGutter: true });
+
+          // Swipe to Restore
+          this.detectSwipe(el, async () => {
+              const choice = await UI.choose('Restore deletion?', [
+                  {label: 'Line', value: 'line', class: 'btn-yes'},
+                  {label: 'Chunk', value: 'chunk', class: 'btn-yes'}
+              ]);
+              if (!choice) return;
+
+              const toRestore = (choice === 'chunk')
+                  ? widgets.filter(x => x.line === w.line)
+                  : [w];
+
+              let textToInsert = '';
+              toRestore.forEach(tr => {
+                  if(tr.restored) return;
+                  tr.restored = true;
+                  textToInsert += tr.content.substring(1) + '\n';
+              });
+
+              if(textToInsert) {
+                  cm.replaceRange(textToInsert, {line: w.line, ch: 0});
+                  CodeMirror.signal(cm, 'change', cm, {origin: '+input'});
+              }
+          });
+      });
+
+      adds.forEach(l => {
+          cm.addLineClass(l, 'background', 'line-add');
+          cm.addLineClass(l, 'gutter', 'line-add');
+      });
+
+      charHighlights.forEach(h => {
+          cm.markText(h.from, h.to, {className: 'char-add'});
+      });
+
+      // 7. Header Button Logic
+      this.detectSwipe(cm.getWrapperElement(), async (touch) => {
+          const pos = cm.coordsChar({left: touch.clientX, top: touch.clientY}, 'window');
+          const lineInfo = cm.lineInfo(pos.line);
+          if (lineInfo && lineInfo.bgClass && lineInfo.bgClass.includes('line-add')) {
+              const choice = await UI.choose('Discard addition?', [
+                  {label: 'Line', value: 'line', class: 'btn-hot'},
+                  {label: 'Chunk', value: 'chunk', class: 'btn-hot'}
+              ]);
+              if (!choice) return;
+
+              if (choice === 'line') {
+                  cm.replaceRange('', {line: pos.line, ch:0}, {line: pos.line + 1, ch:0});
+              } else {
+                  // Find chunk bounds
+                  let start = pos.line;
+                  let end = pos.line;
+                  while(start > 0 && cm.lineInfo(start-1)?.bgClass?.includes('line-add')) start--;
+                  while(end < cm.lineCount()-1 && cm.lineInfo(end+1)?.bgClass?.includes('line-add')) end++;
+
+                  cm.replaceRange('', {line: start, ch:0}, {line: end + 1, ch:0});
+              }
+              CodeMirror.signal(cm, 'change', cm, {origin: '+input'});
+          }
+      });
+
+      // 7. Header Button Logic
+      const saveBtn = card.querySelector('.btn-save-header');
+
+      cm.on('change', (doc, change) => {
+          if (change.origin === 'setValue') return;
+
+          saveBtn.classList.remove('btn-neutral', 'saved', 'btn-yes');
+          saveBtn.classList.add('btn-primary');
+          saveBtn.textContent = 'Save';
+          saveBtn.style.display = 'flex';
+
+          if (cm.saveTimeout) clearTimeout(cm.saveTimeout);
+          cm.saveTimeout = setTimeout(() => App.saveCard(name), 1000);
+      });
+
+      // Refresh to ensure layout.
+      setTimeout(() => cm.refresh(), 100);
+  },
+
+  async saveCard(name) {
+      const cm = this.state.editors[name];
+      if (!cm) return;
+
+      await FS.write(name, cm.getValue());
+      await Git.run(['add', name]); // Auto-stage to ensure single commit
+
+      const card = document.getElementById(`card-${name.replace(/\W/g, '-')}`);
+      const btn = card.querySelector('.btn-save-header');
+      if(btn) {
+          btn.classList.remove('btn-primary', 'btn-neutral');
+          btn.classList.add('saved', 'btn-yes');
+          btn.textContent = 'Saved';
+
+          if (btn.resetTimeout) clearTimeout(btn.resetTimeout);
+          btn.resetTimeout = setTimeout(() => {
+              btn.classList.remove('saved', 'btn-yes');
+              btn.classList.add('btn-neutral');
+              btn.textContent = 'Save';
+          }, 2000);
+      }
+  },
+
+  // --- Config Logic --
+  toggleDebug(enabled) {
+      if (enabled) {
+          localStorage.setItem('git_debug', 'true');
+          document.querySelectorAll('.debug-ui').forEach(el => el.style.display = 'block');
+          if (document.getElementById('import-debug')) document.getElementById('import-debug').style.display = 'block';
+      } else {
+          localStorage.removeItem('git_debug');
+          document.querySelectorAll('.debug-ui').forEach(el => el.style.display = 'none');
+          if (document.getElementById('import-debug')) document.getElementById('import-debug').style.display = 'none';
+      }
+  },
+
+  log(msg) {
+      if (localStorage.getItem('git_debug')) {
+          console.log(msg);
+          const out = document.getElementById('debug-out');
+          if (out) {
+              out.textContent += `[LOG] ${typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg}\n`;
+              out.scrollTop = out.scrollHeight;
+          }
+      }
+  },
+
+  async cfg(action) {
+     const key = document.getElementById('cfg-key').value;
+     const val = document.getElementById('cfg-val').value;
+     const out = document.getElementById('cfg-out');
+     let res;
+     if (action === 'get') res = await Git.run('config', '--get', key);
+     if (action === 'set') res = await Git.run('config', key, val);
+     if (action === 'unset') res = await Git.run('config', '--unset', key);
+
+     if (res.ok) out.textContent = res.text || 'Done';
+     else out.textContent = res.text;
+
+     if (action === 'get' && !res.text) out.textContent = '(empty)';
+  }
+};
+
+// --- UI HELPERS ---
+const UI = {
+   modal: document.getElementById('modal'),
+   msgEl: document.getElementById('modal-msg'),
+   inputEl: document.getElementById('modal-input'),
+   btnsEl: document.querySelector('#modal div'),
+
+   init() {
+       this.modal.onclick = (e) => {
+           if (e.target === this.modal) {
+               this.modal.close();
+               if(this.resolve) this.resolve(null); // Cancel current promise
+           }
+       };
+   },
+
+   reset() {
+       this.inputEl.style.display = 'none';
+       this.inputEl.value = '';
+       this.btnsEl.innerHTML = '';
+   },
+
+   choose(msg, choices) {
+       return new Promise(r => {
+           this.resolve = r; // Store for backdrop cancel
+           this.reset();
+           this.msgEl.textContent = msg;
+
+           choices.forEach(c => {
+               const btn = document.createElement('button');
+               btn.className = `btn ${c.class || 'btn-neutral'}`;
+               btn.textContent = c.label;
+               btn.style.flex = '1';
+               btn.onclick = () => { this.modal.close(); r(c.value); };
+               this.btnsEl.appendChild(btn);
+           });
+
+           if (!choices.some(c => c.cancel)) {
+               const cancel = document.createElement('button');
+               cancel.className = 'btn btn-hot'; // Red for cancel/no
+               cancel.textContent = 'Cancel';
+               cancel.style.flex = '1';
+               cancel.onclick = () => { this.modal.close(); r(null); };
+               this.btnsEl.appendChild(cancel);
+           }
+
+           this.modal.showModal();
+       });
+   },
+
+   prompt(msg) {
+       return new Promise(r => {
+           this.resolve = r;
+           this.reset();
+           this.msgEl.textContent = msg;
+           this.inputEl.style.display = 'block';
+
+           const ok = document.createElement('button');
+           ok.className = 'btn btn-primary'; ok.textContent = 'OK';
+           ok.onclick = () => { this.modal.close(); r(this.inputEl.value); };
+
+           const cancel = document.createElement('button');
+           cancel.className = 'btn btn-hot'; cancel.textContent = 'Cancel';
+           cancel.onclick = () => { this.modal.close(); r(null); };
+
+           this.btnsEl.append(cancel, ok);
+           this.modal.showModal();
+           this.inputEl.focus();
+       });
+   },
+
+   confirm(msg) {
+       return this.choose(msg, [
+           {label: 'Yes', value: true, class: 'btn-yes', cancel: true},
+           {label: 'No', value: false, class: 'btn-hot'}
+       ]).then(r => !!r);
+   },
+
+   alert(msg) {
+       return this.choose(msg, [{label: 'Done', value: true, class: 'btn-primary', cancel: true}]);
+   }
+};
+
+window.onload = () => {
+  try {
+      initIsoGit();
+      UI.init();
+      App.init();
+  }
+  catch(e) { console.error(e); alert('Startup Error: ' + e.message); }
+};
+</script>
+<script src="git.js"></script>
+</body>
+</html>
